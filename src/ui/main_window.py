@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QFileDialog, QLabel, QFrame,
     QProgressBar, QStatusBar, QPushButton, QComboBox,
     QSpinBox, QDoubleSpinBox, QCheckBox, QLineEdit,
-    QGroupBox, QFormLayout, QColorDialog
+    QGroupBox, QFormLayout, QColorDialog, QSlider
 )
 from PyQt6.QtCore import Qt, pyqtSignal, QSize, QTimer, QUrl
 from PyQt6.QtGui import QAction, QIcon, QFont, QColor
@@ -73,6 +73,11 @@ class MainWindow(QMainWindow):
         
         # 初始化应用控制器
         self.app_controller = AppController()
+        
+        # 添加当前图表状态属性
+        self.current_chart_data = None
+        self.current_chart_type = "correlation"
+        self.current_chart_name = "相关性矩阵"
         
         # 加载样式表
         self.load_stylesheet()
@@ -345,6 +350,9 @@ class MainWindow(QMainWindow):
     
     def create_config_tabs(self):
         """创建配置选项卡"""
+        # 基础配置选项卡 (新增)
+        self.create_basic_config_tab()
+        
         # 样式配置选项卡
         self.create_style_config_tab()
         
@@ -353,7 +361,244 @@ class MainWindow(QMainWindow):
         
         # 动画配置选项卡
         self.create_animation_config_tab()
+        
+        # 高级配置选项卡 (新增)
+        self.create_advanced_config_tab()
     
+    def create_basic_config_tab(self):
+        """创建基础配置选项卡"""
+        basic_tab = QWidget()
+        basic_layout = QVBoxLayout()
+        basic_tab.setLayout(basic_layout)
+        
+        # 图表标题配置组
+        title_group = QGroupBox("图表标题")
+        title_layout = QFormLayout()
+        title_group.setLayout(title_layout)
+        
+        # 显示标题开关
+        self.title_show = QCheckBox("显示标题")
+        self.title_show.setChecked(True)
+        self.title_show.toggled.connect(self.on_config_changed)
+        title_layout.addRow(self.title_show)
+        
+        # 标题文本
+        self.title_text = QLineEdit("矩阵热力图")
+        self.title_text.textChanged.connect(self.on_config_changed)
+        title_layout.addRow("标题文本:", self.title_text)
+        
+        # 副标题
+        self.title_subtext = QLineEdit("")
+        self.title_subtext.textChanged.connect(self.on_config_changed)
+        title_layout.addRow("副标题:", self.title_subtext)
+        
+        # 标题位置
+        self.title_position = QComboBox()
+        self.title_position.addItems(["left", "center", "right"])
+        self.title_position.setCurrentText("center")
+        self.title_position.currentTextChanged.connect(self.on_config_changed)
+        title_layout.addRow("标题位置:", self.title_position)
+        
+        # 垂直位置
+        self.title_top = QSpinBox()
+        self.title_top.setRange(0, 100)
+        self.title_top.setValue(20)
+        self.title_top.setSuffix(" px")
+        self.title_top.valueChanged.connect(self.on_config_changed)
+        title_layout.addRow("垂直位置:", self.title_top)
+        
+        # 标题字体大小
+        self.title_font_size = QSpinBox()
+        self.title_font_size.setRange(12, 48)
+        self.title_font_size.setValue(18)
+        self.title_font_size.setSuffix(" px")
+        self.title_font_size.valueChanged.connect(self.on_config_changed)
+        title_layout.addRow("字体大小:", self.title_font_size)
+        
+        # 标题颜色
+        self.title_color = QPushButton("#333333")
+        self.title_color.setStyleSheet("background-color: #333333; color: white;")
+        self.title_color.clicked.connect(self.choose_title_color)
+        title_layout.addRow("标题颜色:", self.title_color)
+        
+        # 标题字体粗细
+        self.title_font_weight = QComboBox()
+        self.title_font_weight.addItems(["normal", "bold", "bolder", "lighter"])
+        self.title_font_weight.setCurrentText("bold")
+        self.title_font_weight.currentTextChanged.connect(self.on_config_changed)
+        title_layout.addRow("字体粗细:", self.title_font_weight)
+        
+        basic_layout.addWidget(title_group)
+        
+        # 网格配置组
+        grid_group = QGroupBox("网格配置")
+        grid_layout = QFormLayout()
+        grid_group.setLayout(grid_layout)
+        
+        # 图表区域高度
+        self.grid_height = QSlider(Qt.Orientation.Horizontal)
+        self.grid_height.setRange(40, 90)
+        self.grid_height.setValue(60)
+        self.grid_height.valueChanged.connect(self.on_config_changed)
+        self.grid_height_label = QLabel("60%")
+        self.grid_height.valueChanged.connect(lambda v: self.grid_height_label.setText(f"{v}%"))
+        grid_height_layout = QHBoxLayout()
+        grid_height_layout.addWidget(self.grid_height)
+        grid_height_layout.addWidget(self.grid_height_label)
+        grid_layout.addRow("图表高度:", grid_height_layout)
+        
+        # 顶部间距
+        self.grid_top = QSlider(Qt.Orientation.Horizontal)
+        self.grid_top.setRange(5, 30)
+        self.grid_top.setValue(15)
+        self.grid_top.valueChanged.connect(self.on_config_changed)
+        self.grid_top_label = QLabel("15%")
+        self.grid_top.valueChanged.connect(lambda v: self.grid_top_label.setText(f"{v}%"))
+        grid_top_layout = QHBoxLayout()
+        grid_top_layout.addWidget(self.grid_top)
+        grid_top_layout.addWidget(self.grid_top_label)
+        grid_layout.addRow("顶部间距:", grid_top_layout)
+        
+        # 左侧间距
+        self.grid_left = QSlider(Qt.Orientation.Horizontal)
+        self.grid_left.setRange(5, 30)
+        self.grid_left.setValue(10)
+        self.grid_left.valueChanged.connect(self.on_config_changed)
+        self.grid_left_label = QLabel("10%")
+        self.grid_left.valueChanged.connect(lambda v: self.grid_left_label.setText(f"{v}%"))
+        grid_left_layout = QHBoxLayout()
+        grid_left_layout.addWidget(self.grid_left)
+        grid_left_layout.addWidget(self.grid_left_label)
+        grid_layout.addRow("左侧间距:", grid_left_layout)
+        
+        # 右侧间距
+        self.grid_right = QSlider(Qt.Orientation.Horizontal)
+        self.grid_right.setRange(5, 30)
+        self.grid_right.setValue(10)
+        self.grid_right.valueChanged.connect(self.on_config_changed)
+        self.grid_right_label = QLabel("10%")
+        self.grid_right.valueChanged.connect(lambda v: self.grid_right_label.setText(f"{v}%"))
+        grid_right_layout = QHBoxLayout()
+        grid_right_layout.addWidget(self.grid_right)
+        grid_right_layout.addWidget(self.grid_right_label)
+        grid_layout.addRow("右侧间距:", grid_right_layout)
+        
+        # 底部间距
+        self.grid_bottom = QSlider(Qt.Orientation.Horizontal)
+        self.grid_bottom.setRange(5, 30)
+        self.grid_bottom.setValue(10)
+        self.grid_bottom.valueChanged.connect(self.on_config_changed)
+        self.grid_bottom_label = QLabel("10%")
+        self.grid_bottom.valueChanged.connect(lambda v: self.grid_bottom_label.setText(f"{v}%"))
+        grid_bottom_layout = QHBoxLayout()
+        grid_bottom_layout.addWidget(self.grid_bottom)
+        grid_bottom_layout.addWidget(self.grid_bottom_label)
+        grid_layout.addRow("底部间距:", grid_bottom_layout)
+        
+        basic_layout.addWidget(grid_group)
+        
+        # 坐标轴配置组
+        axis_group = QGroupBox("坐标轴配置")
+        axis_layout = QFormLayout()
+        axis_group.setLayout(axis_layout)
+        
+        # 显示X轴标签
+        self.x_axis_label_show = QCheckBox("显示X轴标签")
+        self.x_axis_label_show.setChecked(True)
+        self.x_axis_label_show.toggled.connect(self.on_config_changed)
+        axis_layout.addRow(self.x_axis_label_show)
+        
+        # 显示Y轴标签
+        self.y_axis_label_show = QCheckBox("显示Y轴标签")
+        self.y_axis_label_show.setChecked(True)
+        self.y_axis_label_show.toggled.connect(self.on_config_changed)
+        axis_layout.addRow(self.y_axis_label_show)
+        
+        # 轴标签字体大小
+        self.axis_label_font_size = QSpinBox()
+        self.axis_label_font_size.setRange(8, 16)
+        self.axis_label_font_size.setValue(12)
+        self.axis_label_font_size.setSuffix(" px")
+        self.axis_label_font_size.valueChanged.connect(self.on_config_changed)
+        axis_layout.addRow("轴标签字体大小:", self.axis_label_font_size)
+        
+        # 轴标签颜色
+        self.axis_label_color = QPushButton("#666666")
+        self.axis_label_color.setStyleSheet("background-color: #666666; color: white;")
+        self.axis_label_color.clicked.connect(self.choose_axis_label_color)
+        axis_layout.addRow("轴标签颜色:", self.axis_label_color)
+        
+        # X轴标签旋转
+        self.x_axis_rotate = QSlider(Qt.Orientation.Horizontal)
+        self.x_axis_rotate.setRange(0, 90)
+        self.x_axis_rotate.setValue(0)
+        self.x_axis_rotate.valueChanged.connect(self.on_config_changed)
+        self.x_axis_rotate_label = QLabel("0°")
+        self.x_axis_rotate.valueChanged.connect(lambda v: self.x_axis_rotate_label.setText(f"{v}°"))
+        x_axis_rotate_layout = QHBoxLayout()
+        x_axis_rotate_layout.addWidget(self.x_axis_rotate)
+        x_axis_rotate_layout.addWidget(self.x_axis_rotate_label)
+        axis_layout.addRow("X轴标签旋转:", x_axis_rotate_layout)
+        
+        # 显示轴线
+        self.axis_line_show = QCheckBox("显示轴线")
+        self.axis_line_show.setChecked(False)
+        self.axis_line_show.toggled.connect(self.on_config_changed)
+        axis_layout.addRow(self.axis_line_show)
+        
+        # 显示刻度
+        self.axis_tick_show = QCheckBox("显示刻度")
+        self.axis_tick_show.setChecked(False)
+        self.axis_tick_show.toggled.connect(self.on_config_changed)
+        axis_layout.addRow(self.axis_tick_show)
+        
+        basic_layout.addWidget(axis_group)
+        basic_layout.addStretch()
+        
+        # 添加到配置选项卡
+        self.config_tabs.addTab(basic_tab, "基础配置")
+    
+    def choose_title_color(self):
+        """选择标题颜色"""
+        color = QColorDialog.getColor()
+        if color.isValid():
+            color_hex = color.name()
+            self.title_color.setText(color_hex)
+            self.title_color.setStyleSheet(f"background-color: {color_hex}; color: white;")
+            self.on_config_changed()
+    
+    def choose_axis_label_color(self):
+        """选择轴标签颜色"""
+        color = QColorDialog.getColor()
+        if color.isValid():
+            color_hex = color.name()
+            self.axis_label_color.setText(color_hex)
+            self.axis_label_color.setStyleSheet(f"background-color: {color_hex}; color: white;")
+            self.on_config_changed()
+
+    def choose_label_color(self):
+        """选择数据标签颜色"""
+        color = QColorDialog.getColor()
+        if color.isValid():
+            color_hex = color.name()
+            self.label_color.setText(color_hex)
+            self.label_color.setStyleSheet(f"background-color: {color_hex}; color: white;")
+            self.on_config_changed()
+    
+    def choose_cell_border_color(self):
+        """选择单元格边框颜色"""
+        color = QColorDialog.getColor()
+        if color.isValid():
+            color_hex = color.name()
+            self.cell_border_color.setText(color_hex)
+            # 根据颜色亮度调整文字颜色
+            if color.lightness() > 128:
+                text_color = "black"
+            else:
+                text_color = "white"
+            self.cell_border_color.setStyleSheet(f"background-color: {color_hex}; color: {text_color};")
+            self.on_config_changed()
+
     def create_style_config_tab(self):
         """创建样式配置选项卡"""
         style_tab = QWidget()
@@ -409,15 +654,186 @@ class MainWindow(QMainWindow):
         
         style_layout.addWidget(color_group)
         
+        # 视觉映射配置组
+        visual_map_group = QGroupBox("视觉映射")
+        visual_map_layout = QFormLayout()
+        visual_map_group.setLayout(visual_map_layout)
+        
+        # 显示颜色条
+        self.visual_map_show = QCheckBox("显示颜色条")
+        self.visual_map_show.setChecked(True)
+        self.visual_map_show.toggled.connect(self.on_config_changed)
+        visual_map_layout.addRow(self.visual_map_show)
+        
+        # 颜色条方向
+        self.visual_map_orient = QComboBox()
+        self.visual_map_orient.addItems(["vertical", "horizontal"])
+        self.visual_map_orient.setCurrentText("vertical")
+        self.visual_map_orient.currentTextChanged.connect(self.on_config_changed)
+        visual_map_layout.addRow("颜色条方向:", self.visual_map_orient)
+        
+        # 颜色条水平位置
+        self.visual_map_right = QSlider(Qt.Orientation.Horizontal)
+        self.visual_map_right.setRange(0, 20)
+        self.visual_map_right.setValue(5)
+        self.visual_map_right.valueChanged.connect(self.on_config_changed)
+        self.visual_map_right_label = QLabel("5%")
+        self.visual_map_right.valueChanged.connect(lambda v: self.visual_map_right_label.setText(f"{v}%"))
+        visual_map_right_layout = QHBoxLayout()
+        visual_map_right_layout.addWidget(self.visual_map_right)
+        visual_map_right_layout.addWidget(self.visual_map_right_label)
+        visual_map_layout.addRow("右侧位置:", visual_map_right_layout)
+        
+        # 颜色条垂直位置
+        self.visual_map_top = QComboBox()
+        self.visual_map_top.addItems(["top", "center", "bottom"])
+        self.visual_map_top.setCurrentText("center")
+        self.visual_map_top.currentTextChanged.connect(self.on_config_changed)
+        visual_map_layout.addRow("垂直位置:", self.visual_map_top)
+        
+        # 颜色条宽度
+        self.visual_map_width = QSlider(Qt.Orientation.Horizontal)
+        self.visual_map_width.setRange(10, 50)
+        self.visual_map_width.setValue(20)
+        self.visual_map_width.valueChanged.connect(self.on_config_changed)
+        self.visual_map_width_label = QLabel("20px")
+        self.visual_map_width.valueChanged.connect(lambda v: self.visual_map_width_label.setText(f"{v}px"))
+        visual_map_width_layout = QHBoxLayout()
+        visual_map_width_layout.addWidget(self.visual_map_width)
+        visual_map_width_layout.addWidget(self.visual_map_width_label)
+        visual_map_layout.addRow("颜色条宽度:", visual_map_width_layout)
+        
+        # 颜色条高度
+        self.visual_map_height = QSlider(Qt.Orientation.Horizontal)
+        self.visual_map_height.setRange(100, 300)
+        self.visual_map_height.setValue(200)
+        self.visual_map_height.valueChanged.connect(self.on_config_changed)
+        self.visual_map_height_label = QLabel("200px")
+        self.visual_map_height.valueChanged.connect(lambda v: self.visual_map_height_label.setText(f"{v}px"))
+        visual_map_height_layout = QHBoxLayout()
+        visual_map_height_layout.addWidget(self.visual_map_height)
+        visual_map_height_layout.addWidget(self.visual_map_height_label)
+        visual_map_layout.addRow("颜色条高度:", visual_map_height_layout)
+        
+        # 启用拖拽
+        self.visual_map_calculable = QCheckBox("启用拖拽调节")
+        self.visual_map_calculable.setChecked(True)
+        self.visual_map_calculable.toggled.connect(self.on_config_changed)
+        visual_map_layout.addRow(self.visual_map_calculable)
+        
+        # 实时更新
+        self.visual_map_realtime = QCheckBox("实时更新")
+        self.visual_map_realtime.setChecked(False)
+        self.visual_map_realtime.toggled.connect(self.on_config_changed)
+        visual_map_layout.addRow(self.visual_map_realtime)
+        
+        # 数值精度
+        self.visual_map_precision = QSpinBox()
+        self.visual_map_precision.setRange(0, 3)
+        self.visual_map_precision.setValue(1)
+        self.visual_map_precision.valueChanged.connect(self.on_config_changed)
+        visual_map_layout.addRow("数值精度:", self.visual_map_precision)
+        
+        style_layout.addWidget(visual_map_group)
+        
+        # 数据标签配置组
+        data_label_group = QGroupBox("数据标签")
+        data_label_layout = QFormLayout()
+        data_label_group.setLayout(data_label_layout)
+        
+        # 显示数值标签
+        self.show_labels = QCheckBox("显示数值")
+        self.show_labels.setChecked(True)
+        self.show_labels.toggled.connect(self.on_config_changed)
+        data_label_layout.addRow(self.show_labels)
+        
+        # 标签字体大小
+        self.label_font_size = QSlider(Qt.Orientation.Horizontal)
+        self.label_font_size.setRange(8, 16)
+        self.label_font_size.setValue(10)
+        self.label_font_size.valueChanged.connect(self.on_config_changed)
+        self.label_font_size_label = QLabel("10px")
+        self.label_font_size.valueChanged.connect(lambda v: self.label_font_size_label.setText(f"{v}px"))
+        label_font_size_layout = QHBoxLayout()
+        label_font_size_layout.addWidget(self.label_font_size)
+        label_font_size_layout.addWidget(self.label_font_size_label)
+        data_label_layout.addRow("字体大小:", label_font_size_layout)
+        
+        # 标签颜色
+        self.label_color = QPushButton("#333333")
+        self.label_color.setStyleSheet("background-color: #333333; color: white;")
+        self.label_color.clicked.connect(self.choose_label_color)
+        data_label_layout.addRow("标签颜色:", self.label_color)
+        
+        # 标签字体粗细
+        self.label_font_weight = QComboBox()
+        self.label_font_weight.addItems(["normal", "bold"])
+        self.label_font_weight.setCurrentText("normal")
+        self.label_font_weight.currentTextChanged.connect(self.on_config_changed)
+        data_label_layout.addRow("字体粗细:", self.label_font_weight)
+        
+        # 数值格式
+        self.label_formatter = QComboBox()
+        self.label_formatter.addItems(["auto", "integer", "1decimal", "2decimal", "percentage"])
+        self.label_formatter.setCurrentText("auto")
+        self.label_formatter.currentTextChanged.connect(self.on_config_changed)
+        data_label_layout.addRow("数值格式:", self.label_formatter)
+        
+        style_layout.addWidget(data_label_group)
+        
+        # 单元格样式配置组
+        cell_style_group = QGroupBox("单元格样式")
+        cell_style_layout = QFormLayout()
+        cell_style_group.setLayout(cell_style_layout)
+        
+        # 边框宽度
+        self.cell_border_width = QSlider(Qt.Orientation.Horizontal)
+        self.cell_border_width.setRange(0, 5)
+        self.cell_border_width.setValue(1)
+        self.cell_border_width.valueChanged.connect(self.on_config_changed)
+        self.cell_border_width_label = QLabel("1px")
+        self.cell_border_width.valueChanged.connect(lambda v: self.cell_border_width_label.setText(f"{v}px"))
+        cell_border_width_layout = QHBoxLayout()
+        cell_border_width_layout.addWidget(self.cell_border_width)
+        cell_border_width_layout.addWidget(self.cell_border_width_label)
+        cell_style_layout.addRow("边框宽度:", cell_border_width_layout)
+        
+        # 边框颜色
+        self.cell_border_color = QPushButton("#ffffff")
+        self.cell_border_color.setStyleSheet("background-color: #ffffff; color: black;")
+        self.cell_border_color.clicked.connect(self.choose_cell_border_color)
+        cell_style_layout.addRow("边框颜色:", self.cell_border_color)
+        
+        # 圆角半径
+        self.cell_border_radius = QSlider(Qt.Orientation.Horizontal)
+        self.cell_border_radius.setRange(0, 10)
+        self.cell_border_radius.setValue(2)
+        self.cell_border_radius.valueChanged.connect(self.on_config_changed)
+        self.cell_border_radius_label = QLabel("2px")
+        self.cell_border_radius.valueChanged.connect(lambda v: self.cell_border_radius_label.setText(f"{v}px"))
+        cell_border_radius_layout = QHBoxLayout()
+        cell_border_radius_layout.addWidget(self.cell_border_radius)
+        cell_border_radius_layout.addWidget(self.cell_border_radius_label)
+        cell_style_layout.addRow("圆角半径:", cell_border_radius_layout)
+        
+        # 透明度
+        self.cell_opacity = QSlider(Qt.Orientation.Horizontal)
+        self.cell_opacity.setRange(0, 100)
+        self.cell_opacity.setValue(100)
+        self.cell_opacity.valueChanged.connect(self.on_config_changed)
+        self.cell_opacity_label = QLabel("100%")
+        self.cell_opacity.valueChanged.connect(lambda v: self.cell_opacity_label.setText(f"{v}%"))
+        cell_opacity_layout = QHBoxLayout()
+        cell_opacity_layout.addWidget(self.cell_opacity)
+        cell_opacity_layout.addWidget(self.cell_opacity_label)
+        cell_style_layout.addRow("透明度:", cell_opacity_layout)
+        
+        style_layout.addWidget(cell_style_group)
+        
         # 显示配置组  
         display_group = QGroupBox("显示设置")
         display_layout = QFormLayout()
         display_group.setLayout(display_layout)
-        
-        self.show_labels = QCheckBox("显示数值标签")
-        self.show_labels.setChecked(True)
-        self.show_labels.toggled.connect(self.on_config_changed)
-        display_layout.addRow(self.show_labels)
         
         self.show_grid = QCheckBox("显示网格线")
         self.show_grid.setChecked(True)
@@ -501,14 +917,212 @@ class MainWindow(QMainWindow):
         
         self.config_tabs.addTab(animation_tab, "动画配置")
     
+    def create_advanced_config_tab(self):
+        """创建高级配置选项卡"""
+        advanced_tab = QWidget()
+        advanced_layout = QVBoxLayout()
+        advanced_tab.setLayout(advanced_layout)
+        
+        # 渲染配置组
+        rendering_group = QGroupBox("渲染配置")
+        rendering_layout = QFormLayout()
+        rendering_group.setLayout(rendering_layout)
+        
+        # 渲染器类型
+        self.renderer_type = QComboBox()
+        self.renderer_type.addItems(["canvas", "svg"])
+        self.renderer_type.setCurrentText("canvas")
+        self.renderer_type.currentTextChanged.connect(self.on_config_changed)
+        rendering_layout.addRow("渲染器:", self.renderer_type)
+        
+        # 脏矩形优化
+        self.dirty_rect_optimization = QCheckBox("脏矩形优化")
+        self.dirty_rect_optimization.setChecked(False)
+        self.dirty_rect_optimization.toggled.connect(self.on_config_changed)
+        rendering_layout.addRow(self.dirty_rect_optimization)
+        
+        # 渐进渲染
+        self.progressive_render = QSpinBox()
+        self.progressive_render.setRange(0, 10000)
+        self.progressive_render.setValue(0)
+        self.progressive_render.valueChanged.connect(self.on_config_changed)
+        rendering_layout.addRow("渐进渲染:", self.progressive_render)
+        
+        # 渐进阈值
+        self.progressive_threshold = QSpinBox()
+        self.progressive_threshold.setRange(1000, 10000)
+        self.progressive_threshold.setValue(3000)
+        self.progressive_threshold.valueChanged.connect(self.on_config_changed)
+        rendering_layout.addRow("渐进阈值:", self.progressive_threshold)
+        
+        advanced_layout.addWidget(rendering_group)
+        
+        # 工具箱配置组
+        toolbox_group = QGroupBox("工具箱配置")
+        toolbox_layout = QFormLayout()
+        toolbox_group.setLayout(toolbox_layout)
+        
+        # 显示工具箱
+        self.toolbox_show = QCheckBox("显示工具箱")
+        self.toolbox_show.setChecked(False)
+        self.toolbox_show.toggled.connect(self.on_config_changed)
+        toolbox_layout.addRow(self.toolbox_show)
+        
+        # 工具箱方向
+        self.toolbox_orient = QComboBox()
+        self.toolbox_orient.addItems(["horizontal", "vertical"])
+        self.toolbox_orient.setCurrentText("horizontal")
+        self.toolbox_orient.currentTextChanged.connect(self.on_config_changed)
+        toolbox_layout.addRow("工具箱方向:", self.toolbox_orient)
+        
+        # 保存图片功能
+        self.toolbox_save_image = QCheckBox("保存图片")
+        self.toolbox_save_image.setChecked(True)
+        self.toolbox_save_image.toggled.connect(self.on_config_changed)
+        toolbox_layout.addRow(self.toolbox_save_image)
+        
+        # 数据视图功能
+        self.toolbox_data_view = QCheckBox("数据视图")
+        self.toolbox_data_view.setChecked(False)
+        self.toolbox_data_view.toggled.connect(self.on_config_changed)
+        toolbox_layout.addRow(self.toolbox_data_view)
+        
+        # 配置还原功能
+        self.toolbox_restore = QCheckBox("配置还原")
+        self.toolbox_restore.setChecked(True)
+        self.toolbox_restore.toggled.connect(self.on_config_changed)
+        toolbox_layout.addRow(self.toolbox_restore)
+        
+        advanced_layout.addWidget(toolbox_group)
+        
+        # 性能优化组
+        performance_group = QGroupBox("性能优化")
+        performance_layout = QFormLayout()
+        performance_group.setLayout(performance_layout)
+        
+        # 大数据优化
+        self.large_data_optimization = QCheckBox("大数据优化")
+        self.large_data_optimization.setChecked(False)
+        self.large_data_optimization.toggled.connect(self.on_config_changed)
+        performance_layout.addRow(self.large_data_optimization)
+        
+        # 大数据阈值
+        self.large_data_threshold = QSpinBox()
+        self.large_data_threshold.setRange(1000, 10000)
+        self.large_data_threshold.setValue(2000)
+        self.large_data_threshold.valueChanged.connect(self.on_config_changed)
+        performance_layout.addRow("大数据阈值:", self.large_data_threshold)
+        
+        # 采样方式
+        self.sampling_method = QComboBox()
+        self.sampling_method.addItems(["average", "max", "min", "sum"])
+        self.sampling_method.setCurrentText("average")
+        self.sampling_method.currentTextChanged.connect(self.on_config_changed)
+        performance_layout.addRow("采样方式:", self.sampling_method)
+        
+        advanced_layout.addWidget(performance_group)
+        
+        # 无障碍支持组
+        accessibility_group = QGroupBox("无障碍支持")
+        accessibility_layout = QFormLayout()
+        accessibility_group.setLayout(accessibility_layout)
+        
+        # 启用无障碍
+        self.accessibility_enabled = QCheckBox("启用无障碍")
+        self.accessibility_enabled.setChecked(False)
+        self.accessibility_enabled.toggled.connect(self.on_config_changed)
+        accessibility_layout.addRow(self.accessibility_enabled)
+        
+        # 图表描述
+        self.accessibility_label = QLineEdit("")
+        self.accessibility_label.textChanged.connect(self.on_config_changed)
+        accessibility_layout.addRow("图表描述:", self.accessibility_label)
+        
+        # 详细描述
+        self.accessibility_description = QTextEdit()
+        self.accessibility_description.setMaximumHeight(60)
+        self.accessibility_description.textChanged.connect(self.on_config_changed)
+        accessibility_layout.addRow("详细描述:", self.accessibility_description)
+        
+        advanced_layout.addWidget(accessibility_group)
+        advanced_layout.addStretch()
+        
+        # 添加到配置选项卡
+        self.config_tabs.addTab(advanced_tab, "高级配置")
+
     def on_config_changed(self):
         """配置变化处理"""
         # 收集当前配置
         config_updates = {}
         
+        # 基础配置
+        basic_config = {}
+        
+        # 图表标题配置
+        if hasattr(self, 'title_show'):
+            basic_config["title"] = {
+                "show": self.title_show.isChecked(),
+                "text": self.title_text.text() if hasattr(self, 'title_text') else "矩阵热力图",
+                "subtext": self.title_subtext.text() if hasattr(self, 'title_subtext') else "",
+                "left": self.title_position.currentText() if hasattr(self, 'title_position') else "center",
+                "top": self.title_top.value() if hasattr(self, 'title_top') else 20,
+                "textStyle": {
+                    "fontSize": self.title_font_size.value() if hasattr(self, 'title_font_size') else 18,
+                    "color": self.title_color.text() if hasattr(self, 'title_color') else "#333",
+                    "fontWeight": self.title_font_weight.currentText() if hasattr(self, 'title_font_weight') else "bold"
+                }
+            }
+        
+        # 网格配置
+        if hasattr(self, 'grid_height'):
+            basic_config["grid"] = {
+                "height": f"{self.grid_height.value()}%",
+                "top": f"{self.grid_top.value()}%",
+                "left": f"{self.grid_left.value()}%",
+                "right": f"{self.grid_right.value()}%",
+                "bottom": f"{self.grid_bottom.value()}%"
+            }
+        
+        # 坐标轴配置
+        if hasattr(self, 'x_axis_label_show'):
+            basic_config["xAxis"] = {
+                "axisLabel": {
+                    "show": self.x_axis_label_show.isChecked(),
+                    "fontSize": self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
+                    "color": self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666",
+                    "rotate": self.x_axis_rotate.value() if hasattr(self, 'x_axis_rotate') else 0
+                },
+                "axisLine": {
+                    "show": self.axis_line_show.isChecked() if hasattr(self, 'axis_line_show') else False
+                },
+                "axisTick": {
+                    "show": self.axis_tick_show.isChecked() if hasattr(self, 'axis_tick_show') else False
+                }
+            }
+            
+            basic_config["yAxis"] = {
+                "axisLabel": {
+                    "show": self.y_axis_label_show.isChecked(),
+                    "fontSize": self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
+                    "color": self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666"
+                },
+                "axisLine": {
+                    "show": self.axis_line_show.isChecked() if hasattr(self, 'axis_line_show') else False
+                },
+                "axisTick": {
+                    "show": self.axis_tick_show.isChecked() if hasattr(self, 'axis_tick_show') else False
+                }
+            }
+        
+        if basic_config:
+            config_updates["basic"] = basic_config
+        
         # 样式配置
-        style_config = {
-            "title": {
+        style_config = {}
+        
+        # 兼容旧的标题配置
+        if hasattr(self, 'title_text') and not hasattr(self, 'title_show'):
+            style_config["title"] = {
                 "text": self.title_text.text(),
                 "textStyle": {
                     "fontSize": self.title_font_size.value(),
@@ -518,36 +1132,84 @@ class MainWindow(QMainWindow):
                 "left": "center",
                 "top": "5%"
             }
-        }
         
-        # 根据颜色方案设置颜色
-        color_schemes = {
-            "蓝色渐变": ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf"],
-            "红色渐变": ["#67001f", "#b2182b", "#d6604d", "#f4a582", "#fddbc7"],
-            "绿色渐变": ["#00441b", "#238b45", "#66c2a4", "#b2e2e2", "#edf8fb"],
-            "彩虹渐变": ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf", "#fee090", "#fdae61", "#f46d43", "#d73027"]
-        }
-        
-        selected_scheme = self.color_scheme.currentText()
-        if selected_scheme in color_schemes:
-            style_config["visualMap"] = {
-                "inRange": {
-                    "color": color_schemes[selected_scheme]
+        # 颜色方案配置
+        if hasattr(self, 'color_scheme'):
+            color_schemes = {
+                "蓝色渐变": ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf"],
+                "红色渐变": ["#67001f", "#b2182b", "#d6604d", "#f4a582", "#fddbc7"],
+                "绿色渐变": ["#00441b", "#238b45", "#66c2a4", "#b2e2e2", "#edf8fb"],
+                "彩虹渐变": ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf", "#fee090", "#fdae61", "#f46d43", "#d73027"]
+            }
+            
+            selected_scheme = self.color_scheme.currentText()
+            if selected_scheme in color_schemes:
+                style_config["colorScheme"] = {
+                    "preset": selected_scheme.replace("渐变", ""),
+                    "colors": color_schemes[selected_scheme]
                 }
+        
+        # 视觉映射配置
+        if hasattr(self, 'visual_map_show'):
+            style_config["visualMap"] = {
+                "show": self.visual_map_show.isChecked(),
+                "orient": self.visual_map_orient.currentText() if hasattr(self, 'visual_map_orient') else "vertical",
+                "right": f"{self.visual_map_right.value()}%" if hasattr(self, 'visual_map_right') else "5%",
+                "top": self.visual_map_top.currentText() if hasattr(self, 'visual_map_top') else "center",
+                "itemWidth": self.visual_map_width.value() if hasattr(self, 'visual_map_width') else 20,
+                "itemHeight": self.visual_map_height.value() if hasattr(self, 'visual_map_height') else 200,
+                "calculable": self.visual_map_calculable.isChecked() if hasattr(self, 'visual_map_calculable') else True,
+                "realtime": self.visual_map_realtime.isChecked() if hasattr(self, 'visual_map_realtime') else False,
+                "precision": self.visual_map_precision.value() if hasattr(self, 'visual_map_precision') else 1
             }
         
-        config_updates["style"] = style_config
+        # 数据标签配置
+        if hasattr(self, 'show_labels'):
+            label_config = {
+                "show": self.show_labels.isChecked(),
+                "fontSize": self.label_font_size.value() if hasattr(self, 'label_font_size') else 10,
+                "color": self.label_color.text() if hasattr(self, 'label_color') else "#333",
+                "fontWeight": self.label_font_weight.currentText() if hasattr(self, 'label_font_weight') else "normal"
+            }
+            
+            # 数值格式配置
+            if hasattr(self, 'label_formatter'):
+                formatter_map = {
+                    "auto": "auto",
+                    "integer": "{c}",
+                    "1decimal": "{c}",
+                    "2decimal": "{c}",
+                    "percentage": "{c}%"
+                }
+                label_config["formatter"] = formatter_map.get(self.label_formatter.currentText(), "auto")
+            
+            style_config["dataLabels"] = label_config
+        
+        # 单元格样式配置
+        if hasattr(self, 'cell_border_width'):
+            style_config["cellStyle"] = {
+                "borderWidth": self.cell_border_width.value(),
+                "borderColor": self.cell_border_color.text() if hasattr(self, 'cell_border_color') else "#fff",
+                "borderRadius": self.cell_border_radius.value() if hasattr(self, 'cell_border_radius') else 2,
+                "opacity": self.cell_opacity.value() / 100.0 if hasattr(self, 'cell_opacity') else 1.0
+            }
+        
+        if style_config:
+            config_updates["style"] = style_config
         
         # 交互配置
         interaction_config = {}
+        
+        # 提示框配置
         if hasattr(self, 'tooltip_enabled'):
             if self.tooltip_enabled.isChecked():
                 interaction_config["tooltip"] = {
                     "trigger": "item",
-                    "formatter": self.tooltip_format.text()
+                    "formatter": self.tooltip_format.text() if hasattr(self, 'tooltip_format') else "{c}"
                 }
             
-            if self.enable_zoom.isChecked():
+            # 缩放配置
+            if hasattr(self, 'enable_zoom') and self.enable_zoom.isChecked():
                 interaction_config["dataZoom"] = {
                     "xAxisIndex": 0,
                     "yAxisIndex": 0,
@@ -564,20 +1226,102 @@ class MainWindow(QMainWindow):
         animation_config = {}
         if hasattr(self, 'animation_enabled'):
             animation_config = {
+                "animation": self.animation_enabled.isChecked(),
                 "animationDuration": self.animation_duration.value() if self.animation_enabled.isChecked() else 0,
-                "animationEasing": self.animation_easing.currentText(),
+                "animationEasing": self.animation_easing.currentText() if hasattr(self, 'animation_easing') else "cubicInOut",
                 "animationDelay": 0,
                 "animationDurationUpdate": 300,
                 "animationEasingUpdate": "cubicInOut"
             }
+        
+        if animation_config:
             config_updates["animation"] = animation_config
+        
+        # 高级配置
+        advanced_config = {}
+        
+        # 渲染配置
+        if hasattr(self, 'renderer_type'):
+            advanced_config["rendering"] = {
+                "renderer": self.renderer_type.currentText(),
+                "useDirtyRect": self.dirty_rect_optimization.isChecked() if hasattr(self, 'dirty_rect_optimization') else False,
+                "progressive": self.progressive_render.value() if hasattr(self, 'progressive_render') else 0,
+                "progressiveThreshold": self.progressive_threshold.value() if hasattr(self, 'progressive_threshold') else 3000
+            }
+        
+        # 工具箱配置
+        if hasattr(self, 'toolbox_show'):
+            advanced_config["toolbox"] = {
+                "show": self.toolbox_show.isChecked(),
+                "orient": self.toolbox_orient.currentText() if hasattr(self, 'toolbox_orient') else "horizontal",
+                "feature": {
+                    "saveAsImage": {
+                        "show": self.toolbox_save_image.isChecked() if hasattr(self, 'toolbox_save_image') else True
+                    },
+                    "dataView": {
+                        "show": self.toolbox_data_view.isChecked() if hasattr(self, 'toolbox_data_view') else False
+                    },
+                    "restore": {
+                        "show": self.toolbox_restore.isChecked() if hasattr(self, 'toolbox_restore') else True
+                    }
+                }
+            }
+        
+        # 性能优化配置
+        if hasattr(self, 'large_data_optimization'):
+            advanced_config["performance"] = {
+                "large": self.large_data_optimization.isChecked(),
+                "largeThreshold": self.large_data_threshold.value() if hasattr(self, 'large_data_threshold') else 2000,
+                "sampling": self.sampling_method.currentText() if hasattr(self, 'sampling_method') else "average"
+            }
+        
+        # 无障碍支持配置
+        if hasattr(self, 'accessibility_enabled'):
+            advanced_config["accessibility"] = {
+                "enabled": self.accessibility_enabled.isChecked(),
+                "label": self.accessibility_label.text() if hasattr(self, 'accessibility_label') else "",
+                "description": self.accessibility_description.toPlainText() if hasattr(self, 'accessibility_description') else ""
+            }
+        
+        if advanced_config:
+            config_updates["advanced"] = advanced_config
         
         # 更新应用控制器配置
         for section, config in config_updates.items():
-            self.app_controller.update_config(section, config)
+            try:
+                self.app_controller.update_config(section, config)
+            except Exception as e:
+                print(f"更新配置失败: {section} - {e}")
         
         # 发射配置变化信号
         self.config_changed.emit(config_updates)
+        
+        # 重新渲染当前图表以应用配置变化
+        self.refresh_current_chart()
+    
+    def refresh_current_chart(self):
+        """重新渲染当前图表以应用配置变化"""
+        if self.current_chart_data is not None:
+            try:
+                # 重新生成HTML内容，这次会使用最新的配置
+                html_content = self._create_local_heatmap_html_with_config(
+                    self.current_chart_data, 
+                    self.current_chart_name
+                )
+                
+                # 更新图表显示
+                self.chart_view.setHtml(html_content)
+                
+                # 更新代码预览
+                self._update_local_code_preview(self.current_chart_data, self.current_chart_name)
+                
+                print("✅ 图表配置更新成功")
+                
+            except Exception as e:
+                print(f"❌ 重新渲染图表失败: {e}")
+        else:
+            # 如果没有当前数据，渲染默认演示图表
+            self.render_local_heatmap(self.current_chart_type, self.current_chart_name)
     
     def create_menu_bar(self):
         """创建菜单栏"""
@@ -914,8 +1658,13 @@ class MainWindow(QMainWindow):
             else:
                 data_info = self._generate_correlation_data()  # 默认
             
-            # 生成本地HTML
-            html_content = self._create_local_heatmap_html(data_info, display_name)
+            # 保存当前图表状态
+            self.current_chart_data = data_info
+            self.current_chart_type = data_type
+            self.current_chart_name = display_name
+            
+            # 生成本地HTML（使用配置参数）
+            html_content = self._create_local_heatmap_html_with_config(data_info, display_name)
             
             # 显示热力图
             self.chart_view.setHtml(html_content)
@@ -1008,6 +1757,279 @@ class MainWindow(QMainWindow):
             'color_scheme': 'pattern'
         }
 
+    def _get_current_config(self) -> dict:
+        """获取当前配置面板的配置参数"""
+        config = {}
+        
+        # 基础配置
+        if hasattr(self, 'title_show'):
+            config['title'] = {
+                'show': self.title_show.isChecked(),
+                'text': self.title_text.text() if hasattr(self, 'title_text') else "矩阵热力图",
+                'subtext': self.title_subtext.text() if hasattr(self, 'title_subtext') else "",
+                'left': self.title_position.currentText() if hasattr(self, 'title_position') else "center",
+                'top': self.title_top.value() if hasattr(self, 'title_top') else 20,
+                'textStyle': {
+                    'fontSize': self.title_font_size.value() if hasattr(self, 'title_font_size') else 18,
+                    'color': self.title_color.text() if hasattr(self, 'title_color') else "#333",
+                    'fontWeight': self.title_font_weight.currentText() if hasattr(self, 'title_font_weight') else "bold"
+                }
+            }
+        
+        # 网格配置
+        if hasattr(self, 'grid_height'):
+            config['grid'] = {
+                'height': f"{self.grid_height.value()}%",
+                'top': f"{self.grid_top.value()}%",
+                'left': f"{self.grid_left.value()}%",
+                'right': f"{self.grid_right.value()}%",
+                'bottom': f"{self.grid_bottom.value()}%"
+            }
+        
+        # 坐标轴配置
+        if hasattr(self, 'x_axis_label_show'):
+            config['xAxis'] = {
+                'axisLabel': {
+                    'show': self.x_axis_label_show.isChecked(),
+                    'fontSize': self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
+                    'color': self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666",
+                    'rotate': self.x_axis_rotate.value() if hasattr(self, 'x_axis_rotate') else 0
+                }
+            }
+            
+            config['yAxis'] = {
+                'axisLabel': {
+                    'show': self.y_axis_label_show.isChecked(),
+                    'fontSize': self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
+                    'color': self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666"
+                }
+            }
+        
+        # 视觉映射配置
+        if hasattr(self, 'visual_map_show'):
+            config['visualMap'] = {
+                'show': self.visual_map_show.isChecked(),
+                'orient': self.visual_map_orient.currentText() if hasattr(self, 'visual_map_orient') else "vertical",
+                'right': f"{self.visual_map_right.value()}%" if hasattr(self, 'visual_map_right') else "5%",
+                'top': self.visual_map_top.currentText() if hasattr(self, 'visual_map_top') else "center",
+                'itemWidth': self.visual_map_width.value() if hasattr(self, 'visual_map_width') else 20,
+                'itemHeight': self.visual_map_height.value() if hasattr(self, 'visual_map_height') else 200,
+                'calculable': self.visual_map_calculable.isChecked() if hasattr(self, 'visual_map_calculable') else True,
+                'realtime': self.visual_map_realtime.isChecked() if hasattr(self, 'visual_map_realtime') else False,
+                'precision': self.visual_map_precision.value() if hasattr(self, 'visual_map_precision') else 1
+            }
+        
+        # 数据标签配置
+        if hasattr(self, 'show_labels'):
+            config['series'] = {
+                'label': {
+                    'show': self.show_labels.isChecked(),
+                    'fontSize': self.label_font_size.value() if hasattr(self, 'label_font_size') else 10,
+                    'color': self.label_color.text() if hasattr(self, 'label_color') else "#333",
+                    'fontWeight': self.label_font_weight.currentText() if hasattr(self, 'label_font_weight') else "normal"
+                }
+            }
+        
+        # 动画配置
+        if hasattr(self, 'animation_enabled'):
+            config['animation'] = {
+                'animation': self.animation_enabled.isChecked(),
+                'animationDuration': self.animation_duration.value() if hasattr(self, 'animation_duration') else 1000,
+                'animationEasing': self.animation_easing.currentText() if hasattr(self, 'animation_easing') else "cubicInOut"
+            }
+        
+        return config
+    
+    def _build_echarts_config_from_ui(self, title: str, labels: list, data: list, 
+                                     min_val: float, max_val: float, colors: list, config: dict) -> str:
+        """根据UI配置构建ECharts配置对象"""
+        
+        # 基础配置
+        title_config = config.get('title', {})
+        grid_config = config.get('grid', {})
+        xaxis_config = config.get('xAxis', {})
+        yaxis_config = config.get('yAxis', {})
+        visual_map_config = config.get('visualMap', {})
+        series_config = config.get('series', {})
+        animation_config = config.get('animation', {})
+        
+        echarts_option = {
+            'title': {
+                'show': title_config.get('show', True),
+                'text': title_config.get('text', title),
+                'subtext': title_config.get('subtext', ''),
+                'left': title_config.get('left', 'center'),
+                'top': title_config.get('top', 20),
+                'textStyle': title_config.get('textStyle', {
+                    'fontSize': 18,
+                    'color': '#333',
+                    'fontWeight': 'bold'
+                })
+            },
+            'grid': {
+                'height': grid_config.get('height', '60%'),
+                'top': grid_config.get('top', '15%'),
+                'left': grid_config.get('left', '10%'),
+                'right': grid_config.get('right', '15%'),
+                'bottom': grid_config.get('bottom', '10%')
+            },
+            'xAxis': {
+                'type': 'category',
+                'data': labels,
+                'splitArea': {'show': True},
+                'axisLabel': xaxis_config.get('axisLabel', {
+                    'show': True,
+                    'fontSize': 12,
+                    'color': '#666',
+                    'rotate': 0
+                })
+            },
+            'yAxis': {
+                'type': 'category',
+                'data': labels,
+                'splitArea': {'show': True},
+                'axisLabel': yaxis_config.get('axisLabel', {
+                    'show': True,
+                    'fontSize': 12,
+                    'color': '#666'
+                })
+            },
+            'visualMap': {
+                'min': min_val,
+                'max': max_val,
+                'calculable': visual_map_config.get('calculable', True),
+                'orient': visual_map_config.get('orient', 'vertical'),
+                'right': visual_map_config.get('right', '5%'),
+                'top': visual_map_config.get('top', 'center'),
+                'itemWidth': visual_map_config.get('itemWidth', 20),
+                'itemHeight': visual_map_config.get('itemHeight', 200),
+                'realtime': visual_map_config.get('realtime', False),
+                'precision': visual_map_config.get('precision', 1),
+                'show': visual_map_config.get('show', True),
+                'inRange': {'color': colors}
+            },
+            'series': [{
+                'name': '热力图',
+                'type': 'heatmap',
+                'data': data,
+                'label': series_config.get('label', {
+                    'show': True,
+                    'fontSize': 10,
+                    'color': '#333',
+                    'fontWeight': 'normal'
+                }),
+                'emphasis': {
+                    'itemStyle': {
+                        'shadowBlur': 10,
+                        'shadowColor': 'rgba(0, 0, 0, 0.5)'
+                    }
+                }
+            }],
+            'animation': animation_config.get('animation', True),
+            'animationDuration': animation_config.get('animationDuration', 1000),
+            'animationEasing': animation_config.get('animationEasing', 'cubicInOut')
+        }
+        
+        return str(echarts_option).replace("'", '"').replace('True', 'true').replace('False', 'false')
+    
+    def _create_local_heatmap_html_with_config(self, data_info: dict, display_name: str) -> str:
+        """创建使用配置面板参数的本地热力图HTML
+        
+        Args:
+            data_info: 数据信息
+            display_name: 显示名称
+            
+        Returns:
+            str: HTML内容
+        """
+        title = data_info['title']
+        labels = data_info['labels']
+        data = data_info['data']
+        min_val = data_info['min_value']
+        max_val = data_info['max_value']
+        color_scheme = data_info['color_scheme']
+        size = len(labels)
+        
+        # 从配置面板获取配置参数
+        config = self._get_current_config()
+        
+        # 根据配置调整颜色方案
+        if hasattr(self, 'color_scheme') and self.color_scheme.currentText():
+            scheme_name = self.color_scheme.currentText()
+            if "蓝色" in scheme_name:
+                visual_colors = ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
+            elif "红色" in scheme_name:
+                visual_colors = ['#67001f', '#b2182b', '#d6604d', '#f4a582', '#fddbc7', '#f7f7f7', '#d1e5f0', '#92c5de', '#4393c3', '#2166ac']
+            elif "绿色" in scheme_name:
+                visual_colors = ['#00441b', '#238b45', '#66c2a4', '#b2e2e2', '#edf8fb', '#f7fcf0', '#e0f3db', '#ccebc5', '#a8ddb5', '#7bccc4']
+            elif "彩虹" in scheme_name:
+                visual_colors = ['#313695', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
+            else:
+                visual_colors = ['#313695', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
+        else:
+            # 默认颜色方案
+            visual_colors = ['#313695', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
+        
+        # 转换数据格式为ECharts需要的格式
+        echarts_data = []
+        for i in range(size):
+            for j in range(size):
+                echarts_data.append([j, i, data[i][j]])
+        
+        # 获取本地ECharts脚本内容
+        echarts_script = self._get_echarts_script_content()
+        
+        if not echarts_script:
+            echarts_script_tag = '<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>'
+            print("⚠️  使用CDN ECharts作为后备")
+        else:
+            echarts_script_tag = f'<script>{echarts_script}</script>'
+            print("✅ 使用本地ECharts脚本")
+        
+        # 构建ECharts配置对象
+        echarts_config = self._build_echarts_config_from_ui(
+            title, labels, echarts_data, min_val, max_val, visual_colors, config
+        )
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <title>{title}</title>
+            <style>
+                body {{ 
+                    margin: 0; 
+                    padding: 0; 
+                    font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif; 
+                    background: #f5f5f5;
+                }}
+                #chart {{
+                    width: 100%;
+                    height: 100vh;
+                    background: white;
+                }}
+            </style>
+        </head>
+        <body>
+            <div id="chart"></div>
+            {echarts_script_tag}
+            <script>
+                var chart = echarts.init(document.getElementById('chart'));
+                var option = {echarts_config};
+                chart.setOption(option);
+                
+                // 响应式调整
+                window.addEventListener('resize', function() {{
+                    chart.resize();
+                }});
+            </script>
+        </body>
+        </html>
+        """
+        
+        return html_content
+    
     def _create_local_heatmap_html(self, data_info: dict, display_name: str) -> str:
         """创建使用本地ECharts的热力图HTML
         
@@ -1340,6 +2362,370 @@ class MainWindow(QMainWindow):
         
         return html_content
 
+    def _create_local_heatmap_html_for_preview(self, data_info: dict, display_name: str) -> str:
+        """创建用于代码预览的HTML（不嵌入完整ECharts脚本）
+        
+        Args:
+            data_info: 数据信息
+            display_name: 显示名称
+            
+        Returns:
+            str: HTML内容（仅用于预览）
+        """
+        title = data_info['title']
+        labels = data_info['labels']
+        data = data_info['data']
+        min_val = data_info['min_value']
+        max_val = data_info['max_value']
+        color_scheme = data_info['color_scheme']
+        size = len(labels)
+        
+        # 根据不同数据类型选择颜色方案
+        if color_scheme == 'correlation':
+            visual_colors = ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
+            legend_text = ['弱相关', '强相关']
+        elif color_scheme == 'random':
+            visual_colors = ['#440154', '#482777', '#3f4a8a', '#31678e', '#26838f', '#1f9d8a', '#6cce5a', '#b6de2b', '#fee825', '#f0f921']
+            legend_text = ['低值', '高值']
+        elif color_scheme == 'imported':
+            visual_colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#592E83', '#5A9367', '#E63946', '#457B9D', '#F77F00', '#FCBF49']
+            legend_text = ['最小值', '最大值']
+        else:  # pattern
+            visual_colors = ['#0d0887', '#5302a3', '#8b0aa5', '#b83289', '#db5c68', '#f48849', '#febd2a', '#f0f921']
+            legend_text = ['边缘', '中心']
+        
+        # 转换数据格式为ECharts需要的格式
+        echarts_data = []
+        for i in range(size):
+            for j in range(size):
+                echarts_data.append([j, i, data[i][j]])
+        
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <!-- 页面标题 -->
+    <title>{title}</title>
+    
+    <!-- 页面样式定义 -->
+    <style>
+        /* 页面基础样式 */
+        body {{ 
+            margin: 0; 
+            padding: 20px; 
+            font-family: 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }}
+        
+        /* 主容器样式 */
+        .container {{
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }}
+        
+        /* 头部样式 */
+        .header {{
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }}
+        
+        .header h1 {{
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }}
+        
+        .header p {{
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 16px;
+        }}
+        
+        /* 内容区域样式 */
+        .content {{
+            padding: 20px;
+        }}
+        
+        /* 热力图容器样式 */
+        #heatmap {{
+            width: 100%;
+            height: 500px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            background: #fafafa;
+        }}
+        
+        /* 统计信息样式 */
+        .stats {{
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }}
+        
+        .stat-item {{
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }}
+        
+        .stat-value {{
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }}
+        
+        .stat-label {{
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }}
+    </style>
+</head>
+<body>
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 页面头部 -->
+        <div class="header">
+            <h1>📊 {title}</h1>
+            <p>{display_name} - 矩阵尺寸: {size}×{size}</p>
+        </div>
+        
+        <!-- 内容区域 -->
+        <div class="content">
+            <!-- 热力图容器 -->
+            <div id="heatmap"></div>
+            
+            <!-- 统计信息 -->
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value">{size}×{size}</div>
+                    <div class="stat-label">矩阵尺寸</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{min_val:.1f}</div>
+                    <div class="stat-label">最小值</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">{max_val:.1f}</div>
+                    <div class="stat-label">最大值</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 引入ECharts库 -->
+    <script src="./resources/js/echarts.min.js"></script>
+    
+    <!-- 热力图脚本 -->
+    <script>
+        // ECharts加载检查函数
+        function checkEChartsLoaded() {{
+            if (typeof echarts !== 'undefined') {{
+                console.log('✅ ECharts加载成功，版本:', echarts.version);
+                initHeatmap();
+            }} else {{
+                console.log('❌ ECharts加载失败');
+                document.getElementById('heatmap').innerHTML = 
+                    '<div style="text-align: center; color: red; padding: 50px;">' +
+                    '<h3>❌ ECharts库加载失败</h3>' +
+                    '<p>请检查ECharts库文件是否存在</p>' +
+                    '<p>文件路径: ./resources/js/echarts.min.js</p>' +
+                    '</div>';
+            }}
+        }}
+        
+        // 数据配置
+        const labels = {labels};  // 矩阵标签
+        const data = {echarts_data};  // 热力图数据 [x, y, value]
+        const minVal = {min_val};  // 最小值
+        const maxVal = {max_val};  // 最大值
+        const visualColors = {visual_colors};  // 颜色方案
+        const size = {size};  // 矩阵大小
+        
+        // 初始化ECharts热力图
+        function initHeatmap() {{
+            // 获取图表容器
+            const chartDom = document.getElementById('heatmap');
+            
+            // 初始化ECharts实例
+            const myChart = echarts.init(chartDom, null, {{
+                renderer: 'canvas',  // 使用Canvas渲染
+                useDirtyRect: false  // 不使用脏矩形优化
+            }});
+            
+            // 图表配置选项
+            const option = {{
+                // 图表标题
+                title: {{
+                    text: '{title}',
+                    left: 'center',
+                    top: 20,
+                    textStyle: {{
+                        color: '#333',
+                        fontSize: 18,
+                        fontWeight: 'bold'
+                    }}
+                }},
+                
+                // 提示框配置
+                tooltip: {{
+                    position: 'top',
+                    formatter: function(params) {{
+                        const xLabel = labels[params.data[0]];
+                        const yLabel = labels[params.data[1]];
+                        const value = params.data[2];
+                        const percentage = ((value - minVal) / (maxVal - minVal) * 100).toFixed(1);
+                        return `
+                            <div style="padding: 10px; background: rgba(0,0,0,0.8); color: white; border-radius: 5px;">
+                                <strong>${{xLabel}} × ${{yLabel}}</strong><br/>
+                                数值: <strong>${{value}}</strong><br/>
+                                百分位: <strong>${{percentage}}%</strong>
+                            </div>
+                        `;
+                    }}
+                }},
+                
+                // 网格配置
+                grid: {{
+                    height: '60%',
+                    top: '15%',
+                    left: '10%',
+                    right: '10%'
+                }},
+                
+                // X轴配置
+                xAxis: {{
+                    type: 'category',
+                    data: labels,
+                    splitArea: {{
+                        show: false
+                    }},
+                    axisLabel: {{
+                        color: '#666',
+                        fontSize: 12
+                    }},
+                    axisLine: {{
+                        show: false
+                    }},
+                    axisTick: {{
+                        show: false
+                    }}
+                }},
+                
+                // Y轴配置
+                yAxis: {{
+                    type: 'category',
+                    data: labels,
+                    splitArea: {{
+                        show: false
+                    }},
+                    axisLabel: {{
+                        color: '#666',
+                        fontSize: 12
+                    }},
+                    axisLine: {{
+                        show: false
+                    }},
+                    axisTick: {{
+                        show: false
+                    }}
+                }},
+                
+                // 视觉映射配置
+                visualMap: {{
+                    min: minVal,
+                    max: maxVal,
+                    calculable: true,
+                    realtime: false,
+                    inRange: {{
+                        color: visualColors
+                    }},
+                    text: ['{legend_text[1]}', '{legend_text[0]}'],
+                    textStyle: {{
+                        color: '#666'
+                    }},
+                    right: '5%',
+                    top: 'center',
+                    itemWidth: 20,
+                    itemHeight: 200
+                }},
+                
+                // 系列配置
+                series: [{{
+                    name: '矩阵热力图',
+                    type: 'heatmap',
+                    data: data,
+                    label: {{
+                        show: true,
+                        fontSize: 10,
+                        color: '#333',
+                        formatter: function(params) {{
+                            const value = params.data[2];
+                            return value.toFixed(value % 1 === 0 ? 0 : 1);
+                        }}
+                    }},
+                    emphasis: {{
+                        itemStyle: {{
+                            shadowBlur: 10,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }}
+                    }},
+                    itemStyle: {{
+                        borderWidth: 1,
+                        borderColor: '#fff',
+                        borderRadius: 2
+                    }}
+                }}]
+            }};
+            
+            // 设置图表选项
+            myChart.setOption(option);
+            
+            // 添加点击事件
+            myChart.on('click', function(params) {{
+                const xLabel = labels[params.data[0]];
+                const yLabel = labels[params.data[1]];
+                const value = params.data[2];
+                const percentage = ((value - minVal) / (maxVal - minVal) * 100).toFixed(1);
+                const info = `📍 位置: ${{xLabel}} × ${{yLabel}}\\n📊 数值: ${{value}}\\n📈 百分位: ${{percentage}}%`;
+                alert(info);
+            }});
+            
+            // 自适应窗口大小
+            window.addEventListener('resize', function() {{
+                myChart.resize();
+            }});
+            
+            console.log('✅ ECharts热力图渲染完成: {data_info["file_type"]}');
+        }}
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {{
+            // 延迟检查ECharts，确保脚本完全加载
+            setTimeout(checkEChartsLoaded, 100);
+        }});
+    </script>
+</body>
+</html>"""
+        
+        return html_content
+
     def _update_local_code_preview(self, data_info: dict, display_name: str):
         """更新本地代码预览（显示完整HTML和JavaScript）"""
         try:
@@ -1350,50 +2736,131 @@ class MainWindow(QMainWindow):
                 for j in range(size):
                     echarts_data.append([j, i, data_info["data"][i][j]])
             
-            # 生成完整的HTML代码
-            complete_html = self._create_local_heatmap_html(data_info, display_name)
+            # 生成用于预览的HTML代码（不嵌入完整ECharts脚本）
+            preview_html = self._create_local_heatmap_html_for_preview(data_info, display_name)
 
-            # 生成ECharts JavaScript代码示例
-            js_code = f'''// {data_info["title"]} - ECharts热力图配置
-// 准备数据
+            # 根据数据类型确定颜色方案
+            color_scheme = data_info['color_scheme']
+            if color_scheme == 'correlation':
+                visual_colors = ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
+                legend_text = ['弱相关', '强相关']
+            elif color_scheme == 'random':
+                visual_colors = ['#440154', '#482777', '#3f4a8a', '#31678e', '#26838f', '#1f9d8a', '#6cce5a', '#b6de2b', '#fee825', '#f0f921']
+                legend_text = ['低值', '高值']
+            elif color_scheme == 'imported':
+                visual_colors = ['#2E86AB', '#A23B72', '#F18F01', '#C73E1D', '#592E83', '#5A9367', '#E63946', '#457B9D', '#F77F00', '#FCBF49']
+                legend_text = ['最小值', '最大值']
+            else:  # pattern
+                visual_colors = ['#0d0887', '#5302a3', '#8b0aa5', '#b83289', '#db5c68', '#f48849', '#febd2a', '#f0f921']
+                legend_text = ['边缘', '中心']
+
+            # 生成ECharts JavaScript代码示例（带详细注释）
+            js_code = f'''/* 
+ * {data_info["title"]} - ECharts热力图配置
+ * 这个脚本演示了如何使用ECharts创建矩阵热力图
+ * 数据类型: {data_info["file_type"]}
+ * 生成时间: {{"new Date().toLocaleString()"}}
+ */
+
+// =================
+// 第一步：准备数据
+// =================
+
+// 矩阵标签 - 用于显示坐标轴
 const labels = {data_info["labels"]};
-const matrixData = {data_info["data"]};
-const minValue = {data_info["min_value"]};
-const maxValue = {data_info["max_value"]};
 
-// 转换数据格式为ECharts格式 [x, y, value]
+// 原始矩阵数据 - 二维数组格式
+const matrixData = {data_info["data"]};
+
+// 数据范围 - 用于颜色映射
+const minValue = {data_info["min_value"]};  // 最小值
+const maxValue = {data_info["max_value"]};  // 最大值
+
+// 矩阵尺寸
+const matrixSize = {size};
+
+// 颜色方案 - 从低到高的颜色渐变
+const colorScheme = {visual_colors};
+
+// 图例文本 - 用于显示颜色条的标签
+const legendLabels = {legend_text};
+
+// =================
+// 第二步：数据转换
+// =================
+
+// 将二维矩阵转换为ECharts热力图需要的格式
+// 格式: [x坐标, y坐标, 数值]
 const echartsData = [];
 for (let i = 0; i < matrixData.length; i++) {{
     for (let j = 0; j < matrixData[i].length; j++) {{
+        // 添加数据点 [列索引, 行索引, 值]
         echartsData.push([j, i, matrixData[i][j]]);
     }}
 }}
 
-// 初始化ECharts实例
-const chartDom = document.getElementById('heatmap');
-const myChart = echarts.init(chartDom);
+// 输出数据信息到控制台
+console.log('📊 数据信息:', {{
+    'title': '{data_info["title"]}',
+    'size': `${{matrixSize}}×${{matrixSize}}`,
+    'dataPoints': echartsData.length,
+    'range': `${{minValue}} - ${{maxValue}}`,
+    'colorScheme': '{color_scheme}'
+}});
 
-// 配置选项
+// =================
+// 第三步：初始化图表
+// =================
+
+// 获取图表容器DOM元素
+const chartDom = document.getElementById('heatmap');
+
+// 初始化ECharts实例
+const myChart = echarts.init(chartDom, null, {{
+    renderer: 'canvas',      // 使用Canvas渲染（性能更好）
+    useDirtyRect: false,     // 禁用脏矩形优化（确保完整渲染）
+    width: 'auto',           // 自动宽度
+    height: 'auto'           // 自动高度
+}});
+
+// =================
+// 第四步：配置图表选项
+// =================
+
 const option = {{
+    // 图表标题配置
     title: {{
-        text: '{data_info["title"]}',
-        left: 'center',
-        top: 20,
+        text: '{data_info["title"]}',        // 主标题
+        left: 'center',                      // 水平居中
+        top: 20,                             // 顶部间距
         textStyle: {{
-            color: '#333',
-            fontSize: 18,
-            fontWeight: 'bold'
+            color: '#333',                   // 标题颜色
+            fontSize: 18,                    // 字体大小
+            fontWeight: 'bold'               // 字体粗细
         }}
     }},
+    
+    // 提示框配置
     tooltip: {{
-        position: 'top',
+        position: 'top',                     // 显示在鼠标上方
+        trigger: 'item',                     // 触发方式
+        backgroundColor: 'rgba(0,0,0,0.8)',  // 背景色
+        borderColor: '#333',                 // 边框色
+        borderWidth: 1,                      // 边框宽度
+        textStyle: {{
+            color: '#fff',                   // 文字颜色
+            fontSize: 12                     // 字体大小
+        }},
+        // 自定义提示框内容
         formatter: function(params) {{
-            const xLabel = labels[params.data[0]];
-            const yLabel = labels[params.data[1]];
-            const value = params.data[2];
+            const xLabel = labels[params.data[0]];  // X轴标签
+            const yLabel = labels[params.data[1]];  // Y轴标签
+            const value = params.data[2];            // 数值
+            // 计算百分位
             const percentage = ((value - minValue) / (maxValue - minValue) * 100).toFixed(1);
+            
             return `
-                <div>
+                <div style="padding: 10px; border-radius: 5px;">
                     <strong>${{xLabel}} × ${{yLabel}}</strong><br/>
                     数值: <strong>${{value}}</strong><br/>
                     百分位: <strong>${{percentage}}%</strong>
@@ -1401,98 +2868,192 @@ const option = {{
             `;
         }}
     }},
+    
+    // 网格配置 - 定义图表在容器中的位置
     grid: {{
-        height: '60%',
-        top: '15%',
-        left: '10%',
-        right: '10%'
+        height: '60%',                      // 图表高度
+        top: '15%',                         // 顶部间距
+        left: '10%',                        // 左侧间距
+        right: '10%'                        // 右侧间距
     }},
+    
+    // X轴配置
     xAxis: {{
-        type: 'category',
-        data: labels,
+        type: 'category',                   // 类目轴
+        data: labels,                       // 轴数据
         splitArea: {{
-            show: false
+            show: false                     // 不显示网格区域
         }},
         axisLabel: {{
-            color: '#666',
-            fontSize: 12
+            color: '#666',                  // 标签颜色
+            fontSize: 12,                   // 字体大小
+            rotate: 0,                      // 旋转角度
+            margin: 8                       // 标签间距
+        }},
+        axisLine: {{
+            show: false                     // 不显示轴线
+        }},
+        axisTick: {{
+            show: false                     // 不显示刻度
         }}
     }},
+    
+    // Y轴配置
     yAxis: {{
-        type: 'category',
-        data: labels,
+        type: 'category',                   // 类目轴
+        data: labels,                       // 轴数据
         splitArea: {{
-            show: false
+            show: false                     // 不显示网格区域
         }},
         axisLabel: {{
-            color: '#666',
-            fontSize: 12
+            color: '#666',                  // 标签颜色
+            fontSize: 12,                   // 字体大小
+            margin: 8                       // 标签间距
+        }},
+        axisLine: {{
+            show: false                     // 不显示轴线
+        }},
+        axisTick: {{
+            show: false                     // 不显示刻度
         }}
     }},
+    
+    // 视觉映射配置 - 控制颜色映射
     visualMap: {{
-        min: minValue,
-        max: maxValue,
-        calculable: true,
-        realtime: false,
+        min: minValue,                      // 最小值
+        max: maxValue,                      // 最大值
+        calculable: true,                   // 启用拖拽手柄
+        realtime: false,                    // 不实时更新
         inRange: {{
-            color: ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
+            color: colorScheme              // 颜色范围
         }},
-        text: ['高', '低'],
+        text: [legendLabels[1], legendLabels[0]], // 图例文本
         textStyle: {{
-            color: '#666'
+            color: '#666',                  // 文字颜色
+            fontSize: 12                    // 字体大小
         }},
-        right: '5%',
-        top: 'center',
-        itemWidth: 20,
-        itemHeight: 200
+        right: '5%',                        // 右侧位置
+        top: 'center',                      // 垂直居中
+        orient: 'vertical',                 // 垂直方向
+        itemWidth: 20,                      // 图例宽度
+        itemHeight: 200,                    // 图例高度
+        precision: 1                        // 数值精度
     }},
+    
+    // 系列配置 - 定义热力图
     series: [{{
-        name: '矩阵热力图',
-        type: 'heatmap',
-        data: echartsData,
+        name: '矩阵热力图',                 // 系列名称
+        type: 'heatmap',                    // 图表类型
+        data: echartsData,                  // 数据
+        
+        // 标签配置
         label: {{
-            show: true,
-            fontSize: 10,
-            color: '#333',
+            show: true,                     // 显示标签
+            fontSize: 10,                   // 字体大小
+            color: '#333',                  // 字体颜色
+            fontWeight: 'bold',             // 字体粗细
+            // 自定义标签格式
             formatter: function(params) {{
                 const value = params.data[2];
+                // 整数不显示小数位，小数显示1位
                 return value.toFixed(value % 1 === 0 ? 0 : 1);
             }}
         }},
+        
+        // 高亮配置
         emphasis: {{
             itemStyle: {{
-                shadowBlur: 10,
-                shadowColor: 'rgba(0, 0, 0, 0.5)'
+                shadowBlur: 10,             // 阴影模糊
+                shadowColor: 'rgba(0, 0, 0, 0.5)' // 阴影颜色
             }}
         }},
+        
+        // 样式配置
         itemStyle: {{
-            borderWidth: 1,
-            borderColor: '#fff',
-            borderRadius: 2
+            borderWidth: 1,                 // 边框宽度
+            borderColor: '#fff',            // 边框颜色
+            borderRadius: 2                 // 圆角半径
         }}
     }}]
 }};
 
-// 设置选项并渲染
+// =================
+// 第五步：渲染图表
+// =================
+
+// 设置配置选项并渲染图表
 myChart.setOption(option);
 
-// 添加点击事件
+// 输出渲染完成信息
+console.log('✅ 图表渲染完成:', {{
+    'chartType': 'heatmap',
+    'renderer': 'canvas',
+    'dataPoints': echartsData.length,
+    'timestamp': new Date().toLocaleString()
+}});
+
+// =================
+// 第六步：事件处理
+// =================
+
+// 添加点击事件处理
 myChart.on('click', function(params) {{
+    console.log('👆 用户点击:', params);
+    
+    // 获取点击位置的信息
     const xLabel = labels[params.data[0]];
     const yLabel = labels[params.data[1]];
     const value = params.data[2];
-    console.log(`点击位置: ${{xLabel}} × ${{yLabel}}, 数值: ${{value}}`);
+    const percentage = ((value - minValue) / (maxValue - minValue) * 100).toFixed(1);
+    
+    // 显示详细信息
+    const info = `📍 位置: ${{xLabel}} × ${{yLabel}}\\n📊 数值: ${{value}}\\n📈 百分位: ${{percentage}}%`;
+    alert(info);
 }});
 
-// 自适应窗口大小
+// 添加双击事件处理
+myChart.on('dblclick', function(params) {{
+    console.log('🖱️ 用户双击:', params);
+    
+    // 可以在这里添加双击后的操作
+    // 例如：放大到特定区域、显示详细信息等
+}});
+
+// 添加鼠标悬停事件处理
+myChart.on('mouseover', function(params) {{
+    // 鼠标悬停时的操作
+    console.log('🔍 鼠标悬停:', params.data);
+}});
+
+// =================
+// 第七步：响应式处理
+// =================
+
+// 窗口大小变化时自动调整图表大小
 window.addEventListener('resize', function() {{
     myChart.resize();
+    console.log('📏 图表已调整大小');
 }});
 
-console.log('ECharts热力图初始化完成');'''
+// 监听容器大小变化
+const resizeObserver = new ResizeObserver(function(entries) {{
+    myChart.resize();
+}});
+resizeObserver.observe(chartDom);
+
+// =================
+// 第八步：完成回调
+// =================
+
+console.log('🎉 ECharts热力图初始化完成!');
+console.log('💡 使用提示:');
+console.log('   - 鼠标悬停查看数值');
+console.log('   - 点击数据点查看详细信息');
+console.log('   - 拖拽颜色条调整显示范围');
+console.log('   - 窗口大小变化时图表自动调整');'''
 
             # 更新代码编辑器
-            self.html_editor.setPlainText(complete_html)
+            self.html_editor.setPlainText(preview_html)
             self.js_editor.setPlainText(js_code)
             
         except Exception as e:
