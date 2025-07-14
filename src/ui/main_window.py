@@ -356,14 +356,14 @@ class MainWindow(QMainWindow):
         # 样式配置选项卡
         self.create_style_config_tab()
         
-        # 交互配置选项卡
-        self.create_interaction_config_tab()
+        # 交互配置选项卡 - 暂时隐藏
+        # self.create_interaction_config_tab()
         
         # 动画配置选项卡
         self.create_animation_config_tab()
         
-        # 高级配置选项卡 (新增)
-        self.create_advanced_config_tab()
+        # 高级配置选项卡 - 暂时隐藏
+        # self.create_advanced_config_tab()
     
     def create_basic_config_tab(self):
         """创建基础配置选项卡"""
