@@ -2991,6 +2991,7 @@ class MainWindow(QMainWindow):
             'visualMap': {
                 'min': min_val,
                 'max': max_val,
+                'show': visual_map_config.get('show', True),
                 'calculable': visual_map_config.get('calculable', True),
                 'orient': visual_map_config.get('orient', 'vertical'),
                 'realtime': visual_map_config.get('realtime', False),
