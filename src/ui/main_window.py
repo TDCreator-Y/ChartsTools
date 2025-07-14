@@ -4491,9 +4491,15 @@ console.log('   - 窗口大小变化时图表自动调整');'''
         try:
             import os
             file_name = os.path.basename(file_path)
+            display_name = f"导入数据: {file_name}"
             
-            # 生成HTML内容
-            html_content = self._create_local_heatmap_html(data_info, f"导入数据: {file_name}")
+            # 保存当前图表状态 - 关键修复！
+            self.current_chart_data = data_info
+            self.current_chart_type = data_info.get('file_type', 'imported')
+            self.current_chart_name = display_name
+            
+            # 生成HTML内容（使用配置参数以保持样式一致性）
+            html_content = self._create_local_heatmap_html_with_config(data_info, display_name)
             
             # 显示热力图
             self.chart_view.setHtml(html_content)
@@ -4502,9 +4508,9 @@ console.log('   - 窗口大小变化时图表自动调整');'''
             self.update_data_info(data_info)
             
             # 更新代码预览
-            self._update_local_code_preview(data_info, f"导入数据: {file_name}")
+            self._update_local_code_preview(data_info, display_name)
             
-            print(f"✅ 文件热力图渲染成功: {file_name}")
+            print(f"✅ 文件热力图渲染成功: {file_name} (类型: {self.current_chart_type})")
             return True
             
         except Exception as e:
