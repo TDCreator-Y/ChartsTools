@@ -933,17 +933,7 @@ class MainWindow(QMainWindow):
         
         style_layout.addWidget(cell_style_group)
         
-        # 显示配置组  
-        display_group = QGroupBox("显示设置")
-        display_layout = QFormLayout()
-        display_group.setLayout(display_layout)
-        
-        self.show_grid = QCheckBox("显示网格线")
-        self.show_grid.setChecked(True)
-        self.show_grid.toggled.connect(self.on_config_changed)
-        display_layout.addRow(self.show_grid)
-        
-        style_layout.addWidget(display_group)
+        # 注意：显示设置组已移除
         style_layout.addStretch()
         
         self.config_tabs.addTab(style_tab, "样式配置")
@@ -2838,7 +2828,8 @@ class MainWindow(QMainWindow):
             'animationEasing': animation_config.get('animationEasing', 'cubicInOut')
         }
         
-        return str(echarts_option).replace("'", '"').replace('True', 'true').replace('False', 'false')
+        import json
+        return json.dumps(echarts_option, ensure_ascii=False, indent=2)
     
     def _create_local_heatmap_html_with_config(self, data_info: dict, display_name: str) -> str:
         """创建使用配置面板参数的本地热力图HTML

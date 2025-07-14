@@ -3,5 +3,6 @@ description:
 globs:
 alwaysApply: false
 ---
+运行此项目前要激活虚拟环境
 此项目的所有python包在虚拟环境中
 环境地址：D:\Python\PythonVenv\chartstools
