@@ -599,58 +599,230 @@ class MainWindow(QMainWindow):
             self.cell_border_color.setStyleSheet(f"background-color: {color_hex}; color: {text_color};")
             self.on_config_changed()
 
+    def on_color_scheme_changed(self):
+        """处理颜色方案变更"""
+        scheme_name = self.color_scheme.currentText()
+        
+        # 显示或隐藏自定义颜色编辑器
+        if scheme_name == "自定义":
+            self.custom_color_group.setVisible(True)
+        else:
+            self.custom_color_group.setVisible(False)
+        
+        # 更新颜色预览
+        self.update_color_preview()
+        
+        # 触发配置更改
+        self.on_config_changed()
+
+    def update_color_preview(self):
+        """更新颜色预览"""
+        scheme_name = self.color_scheme.currentText()
+        
+        if scheme_name == "自定义":
+            colors = self.custom_colors
+        else:
+            colors = self.color_schemes.get(scheme_name, [])
+        
+        if colors:
+            # 创建渐变背景
+            gradient_stops = []
+            for i, color in enumerate(colors):
+                position = i / (len(colors) - 1) if len(colors) > 1 else 0
+                gradient_stops.append(f"{color} {position * 100:.1f}%")
+            
+            gradient = f"linear-gradient(to right, {', '.join(gradient_stops)})"
+            self.color_preview.setStyleSheet(f"background: {gradient}; border: 1px solid #ccc; border-radius: 4px;")
+        else:
+            self.color_preview.setStyleSheet("background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;")
+
+    def update_custom_color_editor(self):
+        """更新自定义颜色编辑器"""
+        # 清除现有按钮
+        for button in self.custom_color_buttons:
+            button.setParent(None)
+        self.custom_color_buttons.clear()
+        
+        # 调整自定义颜色列表长度
+        color_count = self.custom_color_count.value()
+        if len(self.custom_colors) > color_count:
+            self.custom_colors = self.custom_colors[:color_count]
+        elif len(self.custom_colors) < color_count:
+            # 添加默认颜色
+            default_colors = ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf", "#fee090", "#fdae61", "#f46d43", "#d73027", "#800026"]
+            while len(self.custom_colors) < color_count:
+                self.custom_colors.append(default_colors[len(self.custom_colors) % len(default_colors)])
+        
+        # 创建新的颜色按钮
+        for i in range(color_count):
+            color = self.custom_colors[i]
+            button = QPushButton()
+            button.setFixedSize(40, 30)
+            button.setStyleSheet(f"background-color: {color}; border: 1px solid #ccc; border-radius: 4px;")
+            button.clicked.connect(lambda checked, idx=i: self.choose_custom_color(idx))
+            button.setToolTip(f"点击选择颜色 {i+1}")
+            
+            self.custom_color_buttons.append(button)
+            self.custom_color_buttons_layout.addWidget(button)
+        
+        # 添加弹性空间
+        self.custom_color_buttons_layout.addStretch()
+        
+        # 更新颜色预览
+        if self.color_scheme.currentText() == "自定义":
+            self.update_color_preview()
+            self.on_config_changed()
+
+    def choose_custom_color(self, index):
+        """选择自定义颜色"""
+        color = QColorDialog.getColor()
+        if color.isValid():
+            color_hex = color.name()
+            self.custom_colors[index] = color_hex
+            
+            # 更新按钮样式
+            button = self.custom_color_buttons[index]
+            button.setStyleSheet(f"background-color: {color_hex}; border: 1px solid #ccc; border-radius: 4px;")
+            
+            # 更新颜色预览
+            self.update_color_preview()
+            
+            # 触发配置更改
+            self.on_config_changed()
+
+    def apply_preset_to_custom(self, preset_name):
+        """将预设方案应用到自定义颜色"""
+        if preset_name in self.color_schemes:
+            preset_colors = self.color_schemes[preset_name]
+            
+            # 调整自定义颜色数量
+            self.custom_color_count.setValue(len(preset_colors))
+            
+            # 应用预设颜色
+            self.custom_colors = preset_colors.copy()
+            
+            # 更新编辑器
+            self.update_custom_color_editor()
+            
+            # 切换到自定义模式
+            self.color_scheme.setCurrentText("自定义")
+            self.custom_color_group.setVisible(True)
+            
+            # 更新颜色预览
+            self.update_color_preview()
+            
+            # 触发配置更改
+            self.on_config_changed()
+
+    def get_current_color_scheme(self):
+        """获取当前颜色方案"""
+        scheme_name = self.color_scheme.currentText()
+        
+        if scheme_name == "自定义":
+            return self.custom_colors
+        else:
+            return self.color_schemes.get(scheme_name, [])
+
     def create_style_config_tab(self):
         """创建样式配置选项卡"""
         style_tab = QWidget()
         style_layout = QVBoxLayout()
         style_tab.setLayout(style_layout)
         
-        # 主题配置组
-        theme_group = QGroupBox("主题设置")
-        theme_layout = QFormLayout()
-        theme_group.setLayout(theme_layout)
+
         
-        self.theme_selector = QComboBox()
-        theme_options = ["light", "dark"]
-        theme_labels = ["浅色主题", "深色主题"]
-        self.theme_selector.addItems(theme_labels)
-        # 设置当前主题
-        if self.current_theme == "dark":
-            self.theme_selector.setCurrentIndex(1)
-        else:
-            self.theme_selector.setCurrentIndex(0)
-        self.theme_selector.currentIndexChanged.connect(self.on_theme_changed)
-        theme_layout.addRow("界面主题:", self.theme_selector)
+        # 注意：标题配置已移动到"基础配置"选项卡中，这里不再重复定义
         
-        style_layout.addWidget(theme_group)
-        
-        # 标题配置组
-        title_group = QGroupBox("标题设置")
-        title_layout = QFormLayout()
-        title_group.setLayout(title_layout)
-        
-        self.title_text = QLineEdit("矩阵热力图")
-        self.title_text.textChanged.connect(self.on_config_changed)
-        title_layout.addRow("标题文本:", self.title_text)
-        
-        self.title_font_size = QSpinBox()
-        self.title_font_size.setRange(10, 48)
-        self.title_font_size.setValue(18)
-        self.title_font_size.valueChanged.connect(self.on_config_changed)
-        title_layout.addRow("字体大小:", self.title_font_size)
-        
-        style_layout.addWidget(title_group)
-        
-        # 颜色配置组
+        # 改进的颜色配置组
         color_group = QGroupBox("颜色配置")
-        color_layout = QFormLayout()
+        color_layout = QVBoxLayout()
         color_group.setLayout(color_layout)
         
+        # 颜色方案选择
+        scheme_layout = QHBoxLayout()
+        scheme_layout.addWidget(QLabel("颜色方案:"))
+        
         self.color_scheme = QComboBox()
-        color_schemes = ["蓝色渐变", "红色渐变", "绿色渐变", "彩虹渐变", "自定义"]
-        self.color_scheme.addItems(color_schemes)
-        self.color_scheme.currentTextChanged.connect(self.on_config_changed)
-        color_layout.addRow("颜色方案:", self.color_scheme)
+        self.color_schemes = {
+            "蓝色渐变": ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf"],
+            "红色渐变": ["#67001f", "#b2182b", "#d6604d", "#f4a582", "#fddbc7"],
+            "绿色渐变": ["#00441b", "#238b45", "#66c2a4", "#b2e2e2", "#edf8fb"],
+            "彩虹渐变": ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf", "#fee090", "#fdae61", "#f46d43", "#d73027"],
+            "紫色渐变": ["#3f007d", "#54278f", "#6a51a3", "#807dba", "#9e9ac8", "#bcbddc", "#dadaeb", "#efedf5"],
+            "橙色渐变": ["#7f2704", "#a63603", "#d94801", "#f16913", "#fd8d3c", "#fdae6b", "#fdd0a2", "#feedde"],
+            "青色渐变": ["#006d2c", "#238b45", "#41ab5d", "#74c476", "#a1d99b", "#c7e9c0", "#e5f5e0", "#f7fcf5"],
+            "粉色渐变": ["#7a0177", "#ae017e", "#dd3497", "#f768a1", "#fa9fb5", "#fcc5c0", "#fde0dd", "#fff7f3"],
+            "黄绿渐变": ["#004529", "#006837", "#238443", "#41ab5d", "#78c679", "#addd8e", "#d9f0a3", "#f7fcb9"],
+            "深海蓝": ["#08306b", "#08519c", "#2171b5", "#4292c6", "#6baed6", "#9ecae1", "#c6dbef", "#deebf7"],
+            "火焰红": ["#800026", "#bd0026", "#e31a1c", "#fc4e2a", "#fd8d3c", "#feb24c", "#fed976", "#ffeda0"],
+            "森林绿": ["#00441b", "#006d2c", "#238b45", "#41ab5d", "#74c476", "#a1d99b", "#c7e9c0", "#e5f5e0"],
+            "紫罗兰": ["#4a1486", "#6a51a3", "#807dba", "#9e9ac8", "#bcbddc", "#dadaeb", "#efedf5", "#fcfbfd"],
+            "暖色调": ["#8c2d04", "#cc4c02", "#ec7014", "#fe9929", "#fec44f", "#fee391", "#fff7bc", "#ffffe5"],
+            "冷色调": ["#08519c", "#3182bd", "#6baed6", "#9ecae1", "#c6dbef", "#deebf7", "#f7fbff", "#ffffff"],
+            "自定义": []
+        }
+        
+        color_scheme_names = list(self.color_schemes.keys())
+        self.color_scheme.addItems(color_scheme_names)
+        self.color_scheme.currentTextChanged.connect(self.on_color_scheme_changed)
+        scheme_layout.addWidget(self.color_scheme)
+        
+        # 颜色预览区域
+        self.color_preview = QFrame()
+        self.color_preview.setFixedHeight(30)
+        self.color_preview.setStyleSheet("border: 1px solid #ccc; border-radius: 4px;")
+        scheme_layout.addWidget(self.color_preview)
+        
+        color_layout.addLayout(scheme_layout)
+        
+        # 自定义颜色编辑器（初始隐藏）
+        self.custom_color_group = QGroupBox("自定义颜色编辑器")
+        self.custom_color_layout = QVBoxLayout()
+        self.custom_color_group.setLayout(self.custom_color_layout)
+        
+        # 自定义颜色数量选择
+        custom_count_layout = QHBoxLayout()
+        custom_count_layout.addWidget(QLabel("颜色数量:"))
+        self.custom_color_count = QSpinBox()
+        self.custom_color_count.setRange(3, 10)
+        self.custom_color_count.setValue(5)
+        self.custom_color_count.valueChanged.connect(self.update_custom_color_editor)
+        custom_count_layout.addWidget(self.custom_color_count)
+        custom_count_layout.addStretch()
+        self.custom_color_layout.addLayout(custom_count_layout)
+        
+        # 自定义颜色按钮容器
+        self.custom_color_buttons_layout = QHBoxLayout()
+        self.custom_color_layout.addLayout(self.custom_color_buttons_layout)
+        
+        # 自定义颜色按钮列表
+        self.custom_color_buttons = []
+        self.custom_colors = ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf"]
+        
+        # 预设方案快速应用按钮
+        preset_buttons_layout = QHBoxLayout()
+        preset_buttons_layout.addWidget(QLabel("快速应用:"))
+        
+        quick_presets = ["蓝色渐变", "红色渐变", "绿色渐变", "彩虹渐变"]
+        for preset in quick_presets:
+            btn = QPushButton(preset.replace("渐变", ""))
+            btn.setMaximumWidth(60)
+            btn.clicked.connect(lambda checked, p=preset: self.apply_preset_to_custom(p))
+            preset_buttons_layout.addWidget(btn)
+        
+        preset_buttons_layout.addStretch()
+        self.custom_color_layout.addLayout(preset_buttons_layout)
+        
+        # 初始化自定义颜色编辑器
+        self.update_custom_color_editor()
+        
+        # 初始隐藏自定义颜色组
+        self.custom_color_group.setVisible(False)
+        
+        color_layout.addWidget(self.custom_color_group)
+        
+        # 更新颜色预览
+        self.update_color_preview()
         
         style_layout.addWidget(color_group)
         
@@ -664,75 +836,6 @@ class MainWindow(QMainWindow):
         self.visual_map_show.setChecked(True)
         self.visual_map_show.toggled.connect(self.on_config_changed)
         visual_map_layout.addRow(self.visual_map_show)
-        
-        # 颜色条方向
-        self.visual_map_orient = QComboBox()
-        self.visual_map_orient.addItems(["vertical", "horizontal"])
-        self.visual_map_orient.setCurrentText("vertical")
-        self.visual_map_orient.currentTextChanged.connect(self.on_config_changed)
-        visual_map_layout.addRow("颜色条方向:", self.visual_map_orient)
-        
-        # 颜色条水平位置
-        self.visual_map_right = QSlider(Qt.Orientation.Horizontal)
-        self.visual_map_right.setRange(0, 20)
-        self.visual_map_right.setValue(5)
-        self.visual_map_right.valueChanged.connect(self.on_config_changed)
-        self.visual_map_right_label = QLabel("5%")
-        self.visual_map_right.valueChanged.connect(lambda v: self.visual_map_right_label.setText(f"{v}%"))
-        visual_map_right_layout = QHBoxLayout()
-        visual_map_right_layout.addWidget(self.visual_map_right)
-        visual_map_right_layout.addWidget(self.visual_map_right_label)
-        visual_map_layout.addRow("右侧位置:", visual_map_right_layout)
-        
-        # 颜色条垂直位置
-        self.visual_map_top = QComboBox()
-        self.visual_map_top.addItems(["top", "center", "bottom"])
-        self.visual_map_top.setCurrentText("center")
-        self.visual_map_top.currentTextChanged.connect(self.on_config_changed)
-        visual_map_layout.addRow("垂直位置:", self.visual_map_top)
-        
-        # 颜色条宽度
-        self.visual_map_width = QSlider(Qt.Orientation.Horizontal)
-        self.visual_map_width.setRange(10, 50)
-        self.visual_map_width.setValue(20)
-        self.visual_map_width.valueChanged.connect(self.on_config_changed)
-        self.visual_map_width_label = QLabel("20px")
-        self.visual_map_width.valueChanged.connect(lambda v: self.visual_map_width_label.setText(f"{v}px"))
-        visual_map_width_layout = QHBoxLayout()
-        visual_map_width_layout.addWidget(self.visual_map_width)
-        visual_map_width_layout.addWidget(self.visual_map_width_label)
-        visual_map_layout.addRow("颜色条宽度:", visual_map_width_layout)
-        
-        # 颜色条高度
-        self.visual_map_height = QSlider(Qt.Orientation.Horizontal)
-        self.visual_map_height.setRange(100, 300)
-        self.visual_map_height.setValue(200)
-        self.visual_map_height.valueChanged.connect(self.on_config_changed)
-        self.visual_map_height_label = QLabel("200px")
-        self.visual_map_height.valueChanged.connect(lambda v: self.visual_map_height_label.setText(f"{v}px"))
-        visual_map_height_layout = QHBoxLayout()
-        visual_map_height_layout.addWidget(self.visual_map_height)
-        visual_map_height_layout.addWidget(self.visual_map_height_label)
-        visual_map_layout.addRow("颜色条高度:", visual_map_height_layout)
-        
-        # 启用拖拽
-        self.visual_map_calculable = QCheckBox("启用拖拽调节")
-        self.visual_map_calculable.setChecked(True)
-        self.visual_map_calculable.toggled.connect(self.on_config_changed)
-        visual_map_layout.addRow(self.visual_map_calculable)
-        
-        # 实时更新
-        self.visual_map_realtime = QCheckBox("实时更新")
-        self.visual_map_realtime.setChecked(False)
-        self.visual_map_realtime.toggled.connect(self.on_config_changed)
-        visual_map_layout.addRow(self.visual_map_realtime)
-        
-        # 数值精度
-        self.visual_map_precision = QSpinBox()
-        self.visual_map_precision.setRange(0, 3)
-        self.visual_map_precision.setValue(1)
-        self.visual_map_precision.valueChanged.connect(self.on_config_changed)
-        visual_map_layout.addRow("数值精度:", self.visual_map_precision)
         
         style_layout.addWidget(visual_map_group)
         
@@ -1120,19 +1223,6 @@ class MainWindow(QMainWindow):
         # 样式配置
         style_config = {}
         
-        # 兼容旧的标题配置
-        if hasattr(self, 'title_text') and not hasattr(self, 'title_show'):
-            style_config["title"] = {
-                "text": self.title_text.text(),
-                "textStyle": {
-                    "fontSize": self.title_font_size.value(),
-                    "fontWeight": "bold",
-                    "color": "#333"
-                },
-                "left": "center",
-                "top": "5%"
-            }
-        
         # 颜色方案配置
         if hasattr(self, 'color_scheme'):
             color_schemes = {
@@ -1431,6 +1521,39 @@ class MainWindow(QMainWindow):
         about_action.setStatusTip('关于ECharts矩阵热力图教学工具')
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
+        
+        # 主题菜单
+        theme_menu = menubar.addMenu('主题(&T)')
+        
+        # 浅色主题
+        light_theme_action = QAction('浅色主题(&L)', self)
+        light_theme_action.setStatusTip('切换到浅色主题')
+        light_theme_action.setCheckable(True)
+        light_theme_action.triggered.connect(lambda: self.switch_theme('light'))
+        theme_menu.addAction(light_theme_action)
+        
+        # 深色主题
+        dark_theme_action = QAction('深色主题(&D)', self)
+        dark_theme_action.setStatusTip('切换到深色主题')
+        dark_theme_action.setCheckable(True)
+        dark_theme_action.triggered.connect(lambda: self.switch_theme('dark'))
+        theme_menu.addAction(dark_theme_action)
+        
+        # 创建主题动作组（确保只能选择一个）
+        from PyQt6.QtGui import QActionGroup
+        self.theme_action_group = QActionGroup(self)
+        self.theme_action_group.addAction(light_theme_action)
+        self.theme_action_group.addAction(dark_theme_action)
+        
+        # 保存主题动作引用，以便更新选中状态
+        self.light_theme_action = light_theme_action
+        self.dark_theme_action = dark_theme_action
+        
+        # 根据当前主题设置选中状态
+        if self.current_theme == "light":
+            light_theme_action.setChecked(True)
+        else:
+            dark_theme_action.setChecked(True)
     
     def setup_connections(self):
         """设置信号连接"""
@@ -1794,14 +1917,749 @@ class MainWindow(QMainWindow):
                     'fontSize': self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
                     'color': self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666",
                     'rotate': self.x_axis_rotate.value() if hasattr(self, 'x_axis_rotate') else 0
+                },
+                "axisLine": {
+                    "show": self.axis_line_show.isChecked() if hasattr(self, 'axis_line_show') else False
+                },
+                "axisTick": {
+                    "show": self.axis_tick_show.isChecked() if hasattr(self, 'axis_tick_show') else False
+                }
+            }
+            
+            basic_config["yAxis"] = {
+                "axisLabel": {
+                    "show": self.y_axis_label_show.isChecked(),
+                    "fontSize": self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
+                    "color": self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666"
+                },
+                "axisLine": {
+                    "show": self.axis_line_show.isChecked() if hasattr(self, 'axis_line_show') else False
+                },
+                "axisTick": {
+                    "show": self.axis_tick_show.isChecked() if hasattr(self, 'axis_tick_show') else False
+                }
+            }
+        
+        if basic_config:
+            config_updates["basic"] = basic_config
+        
+        # 样式配置
+        style_config = {}
+        
+        # 颜色方案配置
+        if hasattr(self, 'color_scheme'):
+            color_schemes = {
+                "蓝色渐变": ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf"],
+                "红色渐变": ["#67001f", "#b2182b", "#d6604d", "#f4a582", "#fddbc7"],
+                "绿色渐变": ["#00441b", "#238b45", "#66c2a4", "#b2e2e2", "#edf8fb"],
+                "彩虹渐变": ["#313695", "#74add1", "#abd9e9", "#e0f3f8", "#ffffbf", "#fee090", "#fdae61", "#f46d43", "#d73027"]
+            }
+            
+            selected_scheme = self.color_scheme.currentText()
+            if selected_scheme in color_schemes:
+                style_config["colorScheme"] = {
+                    "preset": selected_scheme.replace("渐变", ""),
+                    "colors": color_schemes[selected_scheme]
+                }
+        
+        # 视觉映射配置
+        if hasattr(self, 'visual_map_show'):
+            style_config["visualMap"] = {
+                "show": self.visual_map_show.isChecked(),
+                "orient": self.visual_map_orient.currentText() if hasattr(self, 'visual_map_orient') else "vertical",
+                "right": f"{self.visual_map_right.value()}%" if hasattr(self, 'visual_map_right') else "5%",
+                "top": self.visual_map_top.currentText() if hasattr(self, 'visual_map_top') else "center",
+                "itemWidth": self.visual_map_width.value() if hasattr(self, 'visual_map_width') else 20,
+                "itemHeight": self.visual_map_height.value() if hasattr(self, 'visual_map_height') else 200,
+                "calculable": self.visual_map_calculable.isChecked() if hasattr(self, 'visual_map_calculable') else True,
+                "realtime": self.visual_map_realtime.isChecked() if hasattr(self, 'visual_map_realtime') else False,
+                "precision": self.visual_map_precision.value() if hasattr(self, 'visual_map_precision') else 1
+            }
+        
+        # 数据标签配置
+        if hasattr(self, 'show_labels'):
+            label_config = {
+                "show": self.show_labels.isChecked(),
+                "fontSize": self.label_font_size.value() if hasattr(self, 'label_font_size') else 10,
+                "color": self.label_color.text() if hasattr(self, 'label_color') else "#333",
+                "fontWeight": self.label_font_weight.currentText() if hasattr(self, 'label_font_weight') else "normal"
+            }
+            
+            # 数值格式配置
+            if hasattr(self, 'label_formatter'):
+                formatter_map = {
+                    "auto": "auto",
+                    "integer": "{c}",
+                    "1decimal": "{c}",
+                    "2decimal": "{c}",
+                    "percentage": "{c}%"
+                }
+                label_config["formatter"] = formatter_map.get(self.label_formatter.currentText(), "auto")
+            
+            style_config["dataLabels"] = label_config
+        
+        # 单元格样式配置
+        if hasattr(self, 'cell_border_width'):
+            style_config["cellStyle"] = {
+                "borderWidth": self.cell_border_width.value(),
+                "borderColor": self.cell_border_color.text() if hasattr(self, 'cell_border_color') else "#fff",
+                "borderRadius": self.cell_border_radius.value() if hasattr(self, 'cell_border_radius') else 2,
+                "opacity": self.cell_opacity.value() / 100.0 if hasattr(self, 'cell_opacity') else 1.0
+            }
+        
+        if style_config:
+            config_updates["style"] = style_config
+        
+        # 交互配置
+        interaction_config = {}
+        
+        # 提示框配置
+        if hasattr(self, 'tooltip_enabled'):
+            if self.tooltip_enabled.isChecked():
+                interaction_config["tooltip"] = {
+                    "trigger": "item",
+                    "formatter": self.tooltip_format.text() if hasattr(self, 'tooltip_format') else "{c}"
+                }
+            
+            # 缩放配置
+            if hasattr(self, 'enable_zoom') and self.enable_zoom.isChecked():
+                interaction_config["dataZoom"] = {
+                    "xAxisIndex": 0,
+                    "yAxisIndex": 0,
+                    "orient": "horizontal",
+                    "bottom": "20%",
+                    "start": 0,
+                    "end": 100
+                }
+        
+        if interaction_config:
+            config_updates["interaction"] = interaction_config
+        
+        # 动画配置
+        animation_config = {}
+        if hasattr(self, 'animation_enabled'):
+            animation_config = {
+                "animation": self.animation_enabled.isChecked(),
+                "animationDuration": self.animation_duration.value() if self.animation_enabled.isChecked() else 0,
+                "animationEasing": self.animation_easing.currentText() if hasattr(self, 'animation_easing') else "cubicInOut",
+                "animationDelay": 0,
+                "animationDurationUpdate": 300,
+                "animationEasingUpdate": "cubicInOut"
+            }
+        
+        if animation_config:
+            config_updates["animation"] = animation_config
+        
+        # 高级配置
+        advanced_config = {}
+        
+        # 渲染配置
+        if hasattr(self, 'renderer_type'):
+            advanced_config["rendering"] = {
+                "renderer": self.renderer_type.currentText(),
+                "useDirtyRect": self.dirty_rect_optimization.isChecked() if hasattr(self, 'dirty_rect_optimization') else False,
+                "progressive": self.progressive_render.value() if hasattr(self, 'progressive_render') else 0,
+                "progressiveThreshold": self.progressive_threshold.value() if hasattr(self, 'progressive_threshold') else 3000
+            }
+        
+        # 工具箱配置
+        if hasattr(self, 'toolbox_show'):
+            advanced_config["toolbox"] = {
+                "show": self.toolbox_show.isChecked(),
+                "orient": self.toolbox_orient.currentText() if hasattr(self, 'toolbox_orient') else "horizontal",
+                "feature": {
+                    "saveAsImage": {
+                        "show": self.toolbox_save_image.isChecked() if hasattr(self, 'toolbox_save_image') else True
+                    },
+                    "dataView": {
+                        "show": self.toolbox_data_view.isChecked() if hasattr(self, 'toolbox_data_view') else False
+                    },
+                    "restore": {
+                        "show": self.toolbox_restore.isChecked() if hasattr(self, 'toolbox_restore') else True
+                    }
+                }
+            }
+        
+        # 性能优化配置
+        if hasattr(self, 'large_data_optimization'):
+            advanced_config["performance"] = {
+                "large": self.large_data_optimization.isChecked(),
+                "largeThreshold": self.large_data_threshold.value() if hasattr(self, 'large_data_threshold') else 2000,
+                "sampling": self.sampling_method.currentText() if hasattr(self, 'sampling_method') else "average"
+            }
+        
+        # 无障碍支持配置
+        if hasattr(self, 'accessibility_enabled'):
+            advanced_config["accessibility"] = {
+                "enabled": self.accessibility_enabled.isChecked(),
+                "label": self.accessibility_label.text() if hasattr(self, 'accessibility_label') else "",
+                "description": self.accessibility_description.toPlainText() if hasattr(self, 'accessibility_description') else ""
+            }
+        
+        if advanced_config:
+            config_updates["advanced"] = advanced_config
+        
+        # 更新应用控制器配置
+        for section, config in config_updates.items():
+            try:
+                self.app_controller.update_config(section, config)
+            except Exception as e:
+                print(f"更新配置失败: {section} - {e}")
+        
+        # 发射配置变化信号
+        self.config_changed.emit(config_updates)
+        
+        # 重新渲染当前图表以应用配置变化
+        self.refresh_current_chart()
+    
+    def refresh_current_chart(self):
+        """重新渲染当前图表以应用配置变化"""
+        if self.current_chart_data is not None:
+            try:
+                # 重新生成HTML内容，这次会使用最新的配置
+                html_content = self._create_local_heatmap_html_with_config(
+                    self.current_chart_data, 
+                    self.current_chart_name
+                )
+                
+                # 更新图表显示
+                self.chart_view.setHtml(html_content)
+                
+                # 更新代码预览
+                self._update_local_code_preview(self.current_chart_data, self.current_chart_name)
+                
+                print("✅ 图表配置更新成功")
+                
+            except Exception as e:
+                print(f"❌ 重新渲染图表失败: {e}")
+        else:
+            # 如果没有当前数据，渲染默认演示图表
+            self.render_local_heatmap(self.current_chart_type, self.current_chart_name)
+    
+    def create_menu_bar(self):
+        """创建菜单栏"""
+        menubar = self.menuBar()
+        
+        # 文件菜单
+        file_menu = menubar.addMenu('文件(&F)')
+        
+        # 新建项目
+        new_action = QAction('新建项目(&N)', self)
+        new_action.setShortcut('Ctrl+N')
+        new_action.setStatusTip('创建新的热力图项目')
+        new_action.triggered.connect(self.new_project)
+        file_menu.addAction(new_action)
+        
+        # 打开配置
+        open_action = QAction('打开配置(&O)', self)
+        open_action.setShortcut('Ctrl+O')
+        open_action.setStatusTip('打开配置文件')
+        open_action.triggered.connect(self.open_config)
+        file_menu.addAction(open_action)
+        
+        # 保存配置
+        save_action = QAction('保存配置(&S)', self)
+        save_action.setShortcut('Ctrl+S')
+        save_action.setStatusTip('保存当前配置')
+        save_action.triggered.connect(self.save_config)
+        file_menu.addAction(save_action)
+        
+        file_menu.addSeparator()
+        
+        # 导出图片
+        export_image_action = QAction('导出图片(&I)', self)
+        export_image_action.setShortcut('Ctrl+E')
+        export_image_action.setStatusTip('导出热力图为图片')
+        export_image_action.triggered.connect(self.export_image)
+        file_menu.addAction(export_image_action)
+        
+        # 导出代码
+        export_code_action = QAction('导出代码(&C)', self)
+        export_code_action.setShortcut('Ctrl+Shift+E')
+        export_code_action.setStatusTip('导出HTML/JS代码')
+        export_code_action.triggered.connect(self.export_code)
+        file_menu.addAction(export_code_action)
+        
+        file_menu.addSeparator()
+        
+        # 退出
+        exit_action = QAction('退出(&X)', self)
+        exit_action.setShortcut('Ctrl+Q')
+        exit_action.setStatusTip('退出应用程序')
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        
+        # 数据菜单
+        data_menu = menubar.addMenu('数据(&D)')
+        
+        # 导入CSV
+        import_csv_action = QAction('导入CSV(&C)', self)
+        import_csv_action.setStatusTip('从CSV文件导入矩阵数据')
+        import_csv_action.triggered.connect(self.import_csv)
+        data_menu.addAction(import_csv_action)
+        
+        # 导入Excel
+        import_excel_action = QAction('导入Excel(&E)', self)
+        import_excel_action.setStatusTip('从Excel文件导入矩阵数据')
+        import_excel_action.triggered.connect(self.import_excel)
+        data_menu.addAction(import_excel_action)
+        
+        data_menu.addSeparator()
+        
+        # 示例数据
+        example_data_action = QAction('加载示例数据(&S)', self)
+        example_data_action.setStatusTip('加载内置示例矩阵数据')
+        example_data_action.triggered.connect(self.load_example_data)
+        data_menu.addAction(example_data_action)
+        
+        # 视图菜单
+        view_menu = menubar.addMenu('视图(&V)')
+        
+        # 重置布局
+        reset_layout_action = QAction('重置布局(&R)', self)
+        reset_layout_action.setStatusTip('重置窗口布局到默认状态')
+        reset_layout_action.triggered.connect(self.reset_layout)
+        view_menu.addAction(reset_layout_action)
+        
+        # 全屏热力图
+        fullscreen_chart_action = QAction('全屏热力图(&F)', self)
+        fullscreen_chart_action.setShortcut('F11')
+        fullscreen_chart_action.setStatusTip('全屏显示热力图')
+        fullscreen_chart_action.triggered.connect(self.fullscreen_chart)
+        view_menu.addAction(fullscreen_chart_action)
+        
+        # 帮助菜单
+        help_menu = menubar.addMenu('帮助(&H)')
+        
+        # 使用教程
+        tutorial_action = QAction('使用教程(&T)', self)
+        tutorial_action.setStatusTip('查看使用教程')
+        tutorial_action.triggered.connect(self.show_tutorial)
+        help_menu.addAction(tutorial_action)
+        
+        help_menu.addSeparator()
+        
+        # 关于
+        about_action = QAction('关于(&A)', self)
+        about_action.setStatusTip('关于ECharts矩阵热力图教学工具')
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+        
+        # 主题菜单
+        theme_menu = menubar.addMenu('主题(&T)')
+        
+        # 浅色主题
+        light_theme_action = QAction('浅色主题(&L)', self)
+        light_theme_action.setStatusTip('切换到浅色主题')
+        light_theme_action.setCheckable(True)
+        light_theme_action.triggered.connect(lambda: self.switch_theme('light'))
+        theme_menu.addAction(light_theme_action)
+        
+        # 深色主题
+        dark_theme_action = QAction('深色主题(&D)', self)
+        dark_theme_action.setStatusTip('切换到深色主题')
+        dark_theme_action.setCheckable(True)
+        dark_theme_action.triggered.connect(lambda: self.switch_theme('dark'))
+        theme_menu.addAction(dark_theme_action)
+        
+        # 创建主题动作组（确保只能选择一个）
+        from PyQt6.QtGui import QActionGroup
+        self.theme_action_group = QActionGroup(self)
+        self.theme_action_group.addAction(light_theme_action)
+        self.theme_action_group.addAction(dark_theme_action)
+        
+        # 保存主题动作引用，以便更新选中状态
+        self.light_theme_action = light_theme_action
+        self.dark_theme_action = dark_theme_action
+        
+        # 根据当前主题设置选中状态
+        if self.current_theme == "light":
+            light_theme_action.setChecked(True)
+        else:
+            dark_theme_action.setChecked(True)
+    
+    def setup_connections(self):
+        """设置信号连接"""
+        # 配置选项卡切换信号
+        self.config_tabs.currentChanged.connect(self.on_config_tab_changed)
+        
+        # 代码查看器选项卡切换信号
+        self.code_viewer.currentChanged.connect(self.on_code_tab_changed)
+        
+        # 连接应用控制器信号
+        self.connect_app_controller_signals()
+    
+    def load_initial_chart(self):
+        """加载初始图表页面"""
+        # 显示简单的欢迎消息
+        self.statusBar().showMessage("正在初始化ECharts热力图...", 2000)
+    
+    def update_code_display(self):
+        """更新代码显示"""
+        # 显示占位内容，实际代码将在加载数据时更新
+        html_placeholder = "<!-- HTML代码将在加载数据后显示 -->"
+        js_placeholder = "// JavaScript代码将在加载数据后显示"
+        
+        self.html_editor.setPlainText(html_placeholder)
+        self.js_editor.setPlainText(js_placeholder)
+    
+    def show_welcome_message(self):
+        """显示欢迎消息"""
+        self.statusBar().showMessage("欢迎使用ECharts矩阵热力图教学工具！", 3000)
+    
+    # 菜单栏事件处理方法
+    def new_project(self):
+        """新建项目"""
+        reply = QMessageBox.question(self, '新建项目', 
+                                   '确定要创建新项目吗？未保存的更改将丢失。',
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                   QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            # 清除应用控制器数据
+            self.app_controller.clear_data()
+            self.app_controller.reset_config()
+            
+            # 重置界面
+            self.load_initial_chart()
+            self.update_code_display()
+            self.update_data_info(None)
+    
+    def open_config(self):
+        """打开配置文件"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, '打开配置文件', '', 
+            'JSON文件 (*.json);;所有文件 (*)'
+        )
+        if file_path:
+            # 使用应用控制器加载配置
+            success = self.app_controller.load_config(file_path)
+            if success:
+                # 如果有数据，重新渲染图表
+                if self.app_controller.get_current_data():
+                    code_dict = self.app_controller.generate_code()
+                    self.update_code_preview(code_dict)
+    
+    def save_config(self):
+        """保存配置文件"""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, '保存配置文件', '', 
+            'JSON文件 (*.json);;所有文件 (*)'
+        )
+        if file_path:
+            # 使用应用控制器保存配置
+            success = self.app_controller.save_config(file_path)
+            if not success:
+                QMessageBox.warning(self, "警告", "配置文件保存失败")
+    
+    def export_image(self):
+        """导出图片"""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self, '导出图片', '', 
+            'PNG文件 (*.png);;JPG文件 (*.jpg);;所有文件 (*)'
+        )
+        if file_path:
+            self.statusBar().showMessage(f"图片已导出: {file_path}", 2000)
+    
+    def export_code(self):
+        """导出代码"""
+        # 选择导出类型
+        from PyQt6.QtWidgets import QInputDialog
+        
+        items = ["完整HTML项目", "单独HTML文件", "JavaScript代码"]
+        item, ok = QInputDialog.getItem(self, "选择导出类型", "请选择要导出的代码类型:", items, 0, False)
+        
+        if ok and item:
+            if item == "完整HTML项目":
+                # 导出完整项目
+                folder_path = QFileDialog.getExistingDirectory(self, "选择导出目录")
+                if folder_path:
+                    success = self.app_controller.export_project(folder_path)
+                    if not success:
+                        QMessageBox.warning(self, "警告", "项目导出失败")
+            else:
+                # 导出单个文件
+                if item == "单独HTML文件":
+                    file_filter = 'HTML文件 (*.html);;所有文件 (*)'
+                elif item == "JavaScript代码":
+                    file_filter = 'JavaScript文件 (*.js);;所有文件 (*)'
+                
+                file_path, _ = QFileDialog.getSaveFileName(
+                    self, f'导出{item}', '', file_filter
+                )
+                if file_path:
+                    code_dict = self.app_controller.generate_code()
+                    if code_dict:
+                        try:
+                            if item == "单独HTML文件":
+                                content = code_dict.get('complete_html', '')
+                            elif item == "JavaScript代码":
+                                content = code_dict.get('javascript', '')
+                            
+                            with open(file_path, 'w', encoding='utf-8') as f:
+                                f.write(content)
+                        except Exception as e:
+                            QMessageBox.critical(self, "错误", f"文件保存失败: {str(e)}")
+                    else:
+                        QMessageBox.warning(self, "警告", "没有可导出的代码")
+    
+    def import_csv(self):
+        """导入CSV文件"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, '导入CSV文件', '', 
+            'CSV文件 (*.csv);;所有文件 (*)'
+        )
+        if file_path:
+            # 直接处理CSV文件并渲染热力图
+            success = self.load_and_render_file_data(file_path, "csv")
+            if success:
+                self.statusBar().showMessage(f"✅ CSV文件导入成功: {file_path}", 3000)
+                print(f"✅ CSV文件导入并渲染成功: {file_path}")
+            else:
+                self.statusBar().showMessage("❌ CSV文件导入失败", 3000)
+                print("❌ CSV文件导入失败")
+            self.data_imported.emit(file_path)
+    
+    def import_excel(self):
+        """导入Excel文件"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, '导入Excel文件', '', 
+            'Excel文件 (*.xlsx *.xls);;所有文件 (*)'
+        )
+        if file_path:
+            # 直接处理Excel文件并渲染热力图
+            success = self.load_and_render_file_data(file_path, "excel")
+            if success:
+                self.statusBar().showMessage(f"✅ Excel文件导入成功: {file_path}", 3000)
+                print(f"✅ Excel文件导入并渲染成功: {file_path}")
+            else:
+                self.statusBar().showMessage("❌ Excel文件导入失败", 3000)
+                print("❌ Excel文件导入失败")
+            self.data_imported.emit(file_path)
+    
+    def load_example_data(self):
+        """加载示例数据 - 只使用本地ECharts"""
+        # 显示示例数据选择对话框
+        from PyQt6.QtWidgets import QInputDialog
+        
+        items = ["相关性矩阵", "随机数据", "模式数据"]
+        item, ok = QInputDialog.getItem(self, "选择示例数据", "请选择要加载的示例数据类型:", items, 0, False)
+        
+        if ok and item:
+            # 映射到内部类型
+            data_type_map = {
+                "相关性矩阵": "correlation",
+                "随机数据": "random", 
+                "模式数据": "pattern"
+            }
+            data_type = data_type_map.get(item, "correlation")
+            
+            # 只使用本地ECharts渲染
+            print(f"🔄 加载示例数据: {item}")
+            success = self.render_local_heatmap(data_type, item)
+            
+            if success:
+                self.statusBar().showMessage(f"✅ 已加载{item}示例数据 (ECharts)", 3000)
+                print(f"✅ {item}示例数据ECharts渲染成功")
+            else:
+                self.statusBar().showMessage("❌ ECharts加载示例数据失败", 3000)
+                print(f"❌ {item}示例数据ECharts渲染失败")
+
+    def force_render_chart(self):
+        """强制渲染图表 - 只使用本地ECharts"""
+        try:
+            print("🔄 强制渲染ECharts图表...")
+            
+            # 使用本地ECharts渲染，默认显示相关性矩阵
+            success = self.render_local_heatmap("correlation", "相关性矩阵")
+            
+            if success:
+                print("✅ ECharts图表渲染成功")
+                self.statusBar().showMessage("✅ ECharts图表渲染成功", 2000)
+            else:
+                print("❌ ECharts图表渲染失败")
+                self.statusBar().showMessage("❌ ECharts图表渲染失败", 2000)
+                
+        except Exception as e:
+            print(f"❌ ECharts渲染失败: {e}")
+            self.statusBar().showMessage(f"❌ ECharts渲染失败: {str(e)}", 3000)
+
+    def render_local_heatmap(self, data_type: str, display_name: str) -> bool:
+        """渲染本地热力图
+        
+        Args:
+            data_type: 数据类型 ("correlation", "random", "pattern")
+            display_name: 显示名称
+            
+        Returns:
+            bool: 是否渲染成功
+        """
+        try:
+            # 根据数据类型生成不同的热力图数据
+            if data_type == "correlation":
+                data_info = self._generate_correlation_data()
+            elif data_type == "random":
+                data_info = self._generate_random_data()
+            elif data_type == "pattern":
+                data_info = self._generate_pattern_data()
+            else:
+                data_info = self._generate_correlation_data()  # 默认
+            
+            # 保存当前图表状态
+            self.current_chart_data = data_info
+            self.current_chart_type = data_type
+            self.current_chart_name = display_name
+            
+            # 生成本地HTML（使用配置参数）
+            html_content = self._create_local_heatmap_html_with_config(data_info, display_name)
+            
+            # 显示热力图
+            self.chart_view.setHtml(html_content)
+            
+            # 更新数据信息显示
+            self.update_data_info(data_info)
+            
+            # 更新代码预览
+            self._update_local_code_preview(data_info, display_name)
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ 本地热力图渲染失败: {e}")
+            return False
+
+    def _generate_correlation_data(self) -> dict:
+        """生成相关性矩阵数据"""
+        subjects = ['数学', '物理', '化学', '英语', '语文']
+        data = [
+            [1.00, 0.85, 0.67, 0.43, 0.28],
+            [0.85, 1.00, 0.73, 0.56, 0.34],
+            [0.67, 0.73, 1.00, 0.68, 0.45],
+            [0.43, 0.56, 0.68, 1.00, 0.72],
+            [0.28, 0.34, 0.45, 0.72, 1.00]
+        ]
+        
+        return {
+            'title': '学科成绩相关性矩阵',
+            'labels': subjects,
+            'data': data,
+            'shape': (5, 5),
+            'file_path': '相关性矩阵示例',
+            'file_type': 'correlation',
+            'min_value': 0.0,
+            'max_value': 1.0,
+            'color_scheme': 'correlation'
+        }
+
+    def _generate_random_data(self) -> dict:
+        """生成随机数据矩阵"""
+        import random
+        labels = [f'变量{i+1}' for i in range(6)]
+        data = []
+        
+        for i in range(6):
+            row = []
+            for j in range(6):
+                value = random.uniform(0, 100)
+                row.append(round(value, 1))
+            data.append(row)
+        
+        return {
+            'title': '随机数据矩阵',
+            'labels': labels,
+            'data': data,
+            'shape': (6, 6),
+            'file_path': '随机数据示例',
+            'file_type': 'random',
+            'min_value': 0.0,
+            'max_value': 100.0,
+            'color_scheme': 'random'
+        }
+
+    def _generate_pattern_data(self) -> dict:
+        """生成模式数据矩阵"""
+        import math
+        labels = [f'节点{i+1}' for i in range(7)]
+        data = []
+        
+        for i in range(7):
+            row = []
+            for j in range(7):
+                # 创建同心圆模式
+                center_i, center_j = 3, 3
+                distance = math.sqrt((i - center_i)**2 + (j - center_j)**2)
+                value = max(0, 50 - distance * 8)
+                row.append(round(value, 1))
+            data.append(row)
+        
+        return {
+            'title': '模式数据矩阵',
+            'labels': labels,
+            'data': data,
+            'shape': (7, 7),
+            'file_path': '模式数据示例',
+            'file_type': 'pattern',
+            'min_value': 0.0,
+            'max_value': 50.0,
+            'color_scheme': 'pattern'
+        }
+
+    def _get_current_config(self) -> dict:
+        """获取当前配置面板的配置参数"""
+        config = {}
+        
+        # 基础配置
+        if hasattr(self, 'title_show'):
+            config['title'] = {
+                'show': self.title_show.isChecked(),
+                'text': self.title_text.text() if hasattr(self, 'title_text') else "矩阵热力图",
+                'subtext': self.title_subtext.text() if hasattr(self, 'title_subtext') else "",
+                'left': self.title_position.currentText() if hasattr(self, 'title_position') else "center",
+                'top': self.title_top.value() if hasattr(self, 'title_top') else 20,
+                'textStyle': {
+                    'fontSize': self.title_font_size.value() if hasattr(self, 'title_font_size') else 18,
+                    'color': self.title_color.text() if hasattr(self, 'title_color') else "#333",
+                    'fontWeight': self.title_font_weight.currentText() if hasattr(self, 'title_font_weight') else "bold"
+                }
+            }
+        
+        # 网格配置
+        if hasattr(self, 'grid_height'):
+            config['grid'] = {
+                'height': f"{self.grid_height.value()}%",
+                'top': f"{self.grid_top.value()}%",
+                'left': f"{self.grid_left.value()}%",
+                'right': f"{self.grid_right.value()}%",
+                'bottom': f"{self.grid_bottom.value()}%"
+            }
+        
+        # 坐标轴配置
+        if hasattr(self, 'x_axis_label_show'):
+            config['xAxis'] = {
+                'axisLabel': {
+                    'show': self.x_axis_label_show.isChecked(),
+                    'fontSize': self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
+                    'color': self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666",
+                    'rotate': self.x_axis_rotate.value() if hasattr(self, 'x_axis_rotate') else 0
+                },
+                "axisLine": {
+                    "show": self.axis_line_show.isChecked() if hasattr(self, 'axis_line_show') else False
+                },
+                "axisTick": {
+                    "show": self.axis_tick_show.isChecked() if hasattr(self, 'axis_tick_show') else False
                 }
             }
             
             config['yAxis'] = {
-                'axisLabel': {
-                    'show': self.y_axis_label_show.isChecked(),
-                    'fontSize': self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
-                    'color': self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666"
+                "axisLabel": {
+                    "show": self.y_axis_label_show.isChecked(),
+                    "fontSize": self.axis_label_font_size.value() if hasattr(self, 'axis_label_font_size') else 12,
+                    "color": self.axis_label_color.text() if hasattr(self, 'axis_label_color') else "#666"
+                },
+                "axisLine": {
+                    "show": self.axis_line_show.isChecked() if hasattr(self, 'axis_line_show') else False
+                },
+                "axisTick": {
+                    "show": self.axis_tick_show.isChecked() if hasattr(self, 'axis_tick_show') else False
                 }
             }
         
@@ -1882,6 +2740,12 @@ class MainWindow(QMainWindow):
                     'fontSize': 12,
                     'color': '#666',
                     'rotate': 0
+                }),
+                'axisLine': xaxis_config.get('axisLine', {
+                    'show': False
+                }),
+                'axisTick': xaxis_config.get('axisTick', {
+                    'show': False
                 })
             },
             'yAxis': {
@@ -1892,6 +2756,12 @@ class MainWindow(QMainWindow):
                     'show': True,
                     'fontSize': 12,
                     'color': '#666'
+                }),
+                'axisLine': yaxis_config.get('axisLine', {
+                    'show': False
+                }),
+                'axisTick': yaxis_config.get('axisTick', {
+                    'show': False
                 })
             },
             'visualMap': {
@@ -1954,18 +2824,8 @@ class MainWindow(QMainWindow):
         config = self._get_current_config()
         
         # 根据配置调整颜色方案
-        if hasattr(self, 'color_scheme') and self.color_scheme.currentText():
-            scheme_name = self.color_scheme.currentText()
-            if "蓝色" in scheme_name:
-                visual_colors = ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
-            elif "红色" in scheme_name:
-                visual_colors = ['#67001f', '#b2182b', '#d6604d', '#f4a582', '#fddbc7', '#f7f7f7', '#d1e5f0', '#92c5de', '#4393c3', '#2166ac']
-            elif "绿色" in scheme_name:
-                visual_colors = ['#00441b', '#238b45', '#66c2a4', '#b2e2e2', '#edf8fb', '#f7fcf0', '#e0f3db', '#ccebc5', '#a8ddb5', '#7bccc4']
-            elif "彩虹" in scheme_name:
-                visual_colors = ['#313695', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
-            else:
-                visual_colors = ['#313695', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
+        if hasattr(self, 'color_scheme') and hasattr(self, 'get_current_color_scheme'):
+            visual_colors = self.get_current_color_scheme()
         else:
             # 默认颜色方案
             visual_colors = ['#313695', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027']
@@ -3153,19 +4013,31 @@ console.log('   - 窗口大小变化时图表自动调整');'''
         else:
             event.ignore()
     
-    def on_theme_changed(self, index):
-        """主题切换事件处理"""
-        theme_options = ["light", "dark"]
-        new_theme = theme_options[index]
-        
-        if new_theme != self.current_theme:
-            self.current_theme = new_theme
+    def switch_theme(self, theme_name):
+        """切换主题"""
+        if theme_name != self.current_theme:
+            self.current_theme = theme_name
             self.load_stylesheet()
             self.save_theme_settings()
             
-            # 显示主题切换提示
+            # 更新菜单项选中状态
+            if hasattr(self, 'light_theme_action') and hasattr(self, 'dark_theme_action'):
+                if theme_name == "light":
+                    self.light_theme_action.setChecked(True)
+                    self.dark_theme_action.setChecked(False)
+                else:
+                    self.light_theme_action.setChecked(False)
+                    self.dark_theme_action.setChecked(True)
+            
+            # 状态栏提示
             theme_names = {"light": "浅色主题", "dark": "深色主题"}
-            self.status_label.setText(f"已切换到{theme_names[new_theme]}")
+            self.status_label.setText(f"已切换到{theme_names[theme_name]}")
+    
+    def on_theme_changed(self, index):
+        """主题变更事件处理（保留兼容性）"""
+        theme_options = ["light", "dark"]
+        new_theme = theme_options[index]
+        self.switch_theme(new_theme)
     
     def load_theme_settings(self):
         """加载主题设置"""
