@@ -1284,6 +1284,12 @@ class MainWindow(QMainWindow):
                 "opacity": self.cell_opacity.value() / 100.0 if hasattr(self, 'cell_opacity') else 1.0
             }
         
+        # 显示网格线配置
+        if hasattr(self, 'show_grid'):
+            style_config["splitArea"] = {
+                "show": self.show_grid.isChecked()
+            }
+        
         if style_config:
             config_updates["style"] = style_config
         
@@ -2007,6 +2013,12 @@ class MainWindow(QMainWindow):
                 "opacity": self.cell_opacity.value() / 100.0 if hasattr(self, 'cell_opacity') else 1.0
             }
         
+        # 显示网格线配置
+        if hasattr(self, 'show_grid'):
+            style_config["splitArea"] = {
+                "show": self.show_grid.isChecked()
+            }
+        
         if style_config:
             config_updates["style"] = style_config
         
@@ -2688,6 +2700,23 @@ class MainWindow(QMainWindow):
                 }
             }
         
+        # 单元格样式配置
+        if hasattr(self, 'cell_border_width'):
+            if 'series' not in config:
+                config['series'] = {}
+            config['series']['itemStyle'] = {
+                'borderWidth': self.cell_border_width.value(),
+                'borderColor': self.cell_border_color.text() if hasattr(self, 'cell_border_color') else "#fff",
+                'borderRadius': self.cell_border_radius.value() if hasattr(self, 'cell_border_radius') else 2,
+                'opacity': self.cell_opacity.value() / 100.0 if hasattr(self, 'cell_opacity') else 1.0
+            }
+        
+        # 显示网格线配置
+        if hasattr(self, 'show_grid'):
+            config['splitArea'] = {
+                'show': self.show_grid.isChecked()
+            }
+        
         # 动画配置
         if hasattr(self, 'animation_enabled'):
             config['animation'] = {
@@ -2710,6 +2739,7 @@ class MainWindow(QMainWindow):
         visual_map_config = config.get('visualMap', {})
         series_config = config.get('series', {})
         animation_config = config.get('animation', {})
+        split_area_config = config.get('splitArea', {})
         
         echarts_option = {
             'title': {
@@ -2734,7 +2764,7 @@ class MainWindow(QMainWindow):
             'xAxis': {
                 'type': 'category',
                 'data': labels,
-                'splitArea': {'show': True},
+                'splitArea': {'show': split_area_config.get('show', True)},
                 'axisLabel': xaxis_config.get('axisLabel', {
                     'show': True,
                     'fontSize': 12,
@@ -2751,7 +2781,7 @@ class MainWindow(QMainWindow):
             'yAxis': {
                 'type': 'category',
                 'data': labels,
-                'splitArea': {'show': True},
+                'splitArea': {'show': split_area_config.get('show', True)},
                 'axisLabel': yaxis_config.get('axisLabel', {
                     'show': True,
                     'fontSize': 12,
@@ -2769,17 +2799,19 @@ class MainWindow(QMainWindow):
                 'max': max_val,
                 'calculable': visual_map_config.get('calculable', True),
                 'orient': visual_map_config.get('orient', 'vertical'),
+                'realtime': visual_map_config.get('realtime', False),
+                'precision': visual_map_config.get('precision', 1),
+                'left': visual_map_config.get('left', 'auto'),
                 'right': visual_map_config.get('right', '5%'),
                 'top': visual_map_config.get('top', 'center'),
                 'itemWidth': visual_map_config.get('itemWidth', 20),
                 'itemHeight': visual_map_config.get('itemHeight', 200),
-                'realtime': visual_map_config.get('realtime', False),
-                'precision': visual_map_config.get('precision', 1),
-                'show': visual_map_config.get('show', True),
-                'inRange': {'color': colors}
+                'inRange': {
+                    'color': colors
+                }
             },
             'series': [{
-                'name': '热力图',
+                'name': '矩阵热力图',
                 'type': 'heatmap',
                 'data': data,
                 'label': series_config.get('label', {
@@ -2787,6 +2819,12 @@ class MainWindow(QMainWindow):
                     'fontSize': 10,
                     'color': '#333',
                     'fontWeight': 'normal'
+                }),
+                'itemStyle': series_config.get('itemStyle', {
+                    'borderWidth': 1,
+                    'borderColor': '#fff',
+                    'borderRadius': 2,
+                    'opacity': 1.0
                 }),
                 'emphasis': {
                     'itemStyle': {
