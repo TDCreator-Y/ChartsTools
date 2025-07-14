@@ -417,7 +417,27 @@ class MainWindow(QMainWindow):
         
         # 标题颜色
         self.title_color = QPushButton("#333333")
-        self.title_color.setStyleSheet("background-color: #333333; color: white;")
+        self.title_color.setObjectName("colorButton")
+        self.title_color.setStyleSheet("""
+            QPushButton#colorButton {
+                background: #333333 !important;
+                color: white !important;
+                border: 2px solid #bdc3c7 !important;
+                border-radius: 4px !important;
+                padding: 6px 12px !important;
+                font-size: 12px !important;
+                font-weight: normal !important;
+                min-height: 16px !important;
+                max-width: 80px !important;
+            }
+            QPushButton#colorButton:hover {
+                border: 2px solid #3498db !important;
+                background: #333333 !important;
+            }
+            QPushButton#colorButton:pressed {
+                background: #2c2c2c !important;
+            }
+        """)
         self.title_color.clicked.connect(self.choose_title_color)
         title_layout.addRow("标题颜色:", self.title_color)
         
@@ -524,7 +544,27 @@ class MainWindow(QMainWindow):
         
         # 轴标签颜色
         self.axis_label_color = QPushButton("#666666")
-        self.axis_label_color.setStyleSheet("background-color: #666666; color: white;")
+        self.axis_label_color.setObjectName("colorButton")
+        self.axis_label_color.setStyleSheet("""
+            QPushButton#colorButton {
+                background: #666666 !important;
+                color: white !important;
+                border: 2px solid #bdc3c7 !important;
+                border-radius: 4px !important;
+                padding: 6px 12px !important;
+                font-size: 12px !important;
+                font-weight: normal !important;
+                min-height: 16px !important;
+                max-width: 80px !important;
+            }
+            QPushButton#colorButton:hover {
+                border: 2px solid #3498db !important;
+                background: #666666 !important;
+            }
+            QPushButton#colorButton:pressed {
+                background: #555555 !important;
+            }
+        """)
         self.axis_label_color.clicked.connect(self.choose_axis_label_color)
         axis_layout.addRow("轴标签颜色:", self.axis_label_color)
         
@@ -564,8 +604,49 @@ class MainWindow(QMainWindow):
         if color.isValid():
             color_hex = color.name()
             self.title_color.setText(color_hex)
-            self.title_color.setStyleSheet(f"background-color: {color_hex}; color: white;")
+            # 根据颜色亮度选择合适的文字颜色
+            text_color = "black" if self._is_light_color(color_hex) else "white"
+            self.title_color.setStyleSheet(f"""
+                QPushButton#colorButton {{
+                    background: {color_hex} !important;
+                    color: {text_color} !important;
+                    border: 2px solid #bdc3c7 !important;
+                    border-radius: 4px !important;
+                    padding: 6px 12px !important;
+                    font-size: 12px !important;
+                    font-weight: normal !important;
+                    min-height: 16px !important;
+                    max-width: 80px !important;
+                }}
+                QPushButton#colorButton:hover {{
+                    border: 2px solid #3498db !important;
+                    background: {color_hex} !important;
+                }}
+                QPushButton#colorButton:pressed {{
+                    background: {self._darken_color(color_hex)} !important;
+                }}
+            """)
             self.on_config_changed()
+    
+    def _is_light_color(self, hex_color):
+        """判断颜色是否为浅色"""
+        # 移除#号
+        hex_color = hex_color.lstrip('#')
+        # 转换为RGB
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        # 计算亮度 (使用标准公式)
+        brightness = (r * 299 + g * 587 + b * 114) / 1000
+        return brightness > 128
+    
+    def _darken_color(self, hex_color):
+        """加深颜色"""
+        hex_color = hex_color.lstrip('#')
+        r = max(0, int(hex_color[0:2], 16) - 30)
+        g = max(0, int(hex_color[2:4], 16) - 30)
+        b = max(0, int(hex_color[4:6], 16) - 30)
+        return f"#{r:02x}{g:02x}{b:02x}"
     
     def choose_axis_label_color(self):
         """选择轴标签颜色"""
@@ -573,7 +654,28 @@ class MainWindow(QMainWindow):
         if color.isValid():
             color_hex = color.name()
             self.axis_label_color.setText(color_hex)
-            self.axis_label_color.setStyleSheet(f"background-color: {color_hex}; color: white;")
+            # 根据颜色亮度选择合适的文字颜色
+            text_color = "black" if self._is_light_color(color_hex) else "white"
+            self.axis_label_color.setStyleSheet(f"""
+                QPushButton#colorButton {{
+                    background: {color_hex} !important;
+                    color: {text_color} !important;
+                    border: 2px solid #bdc3c7 !important;
+                    border-radius: 4px !important;
+                    padding: 6px 12px !important;
+                    font-size: 12px !important;
+                    font-weight: normal !important;
+                    min-height: 16px !important;
+                    max-width: 80px !important;
+                }}
+                QPushButton#colorButton:hover {{
+                    border: 2px solid #3498db !important;
+                    background: {color_hex} !important;
+                }}
+                QPushButton#colorButton:pressed {{
+                    background: {self._darken_color(color_hex)} !important;
+                }}
+            """)
             self.on_config_changed()
 
     def choose_label_color(self):
@@ -582,7 +684,28 @@ class MainWindow(QMainWindow):
         if color.isValid():
             color_hex = color.name()
             self.label_color.setText(color_hex)
-            self.label_color.setStyleSheet(f"background-color: {color_hex}; color: white;")
+            # 根据颜色亮度选择合适的文字颜色
+            text_color = "black" if self._is_light_color(color_hex) else "white"
+            self.label_color.setStyleSheet(f"""
+                QPushButton#colorButton {{
+                    background: {color_hex} !important;
+                    color: {text_color} !important;
+                    border: 2px solid #bdc3c7 !important;
+                    border-radius: 4px !important;
+                    padding: 6px 12px !important;
+                    font-size: 12px !important;
+                    font-weight: normal !important;
+                    min-height: 16px !important;
+                    max-width: 80px !important;
+                }}
+                QPushButton#colorButton:hover {{
+                    border: 2px solid #3498db !important;
+                    background: {color_hex} !important;
+                }}
+                QPushButton#colorButton:pressed {{
+                    background: {self._darken_color(color_hex)} !important;
+                }}
+            """)
             self.on_config_changed()
     
     def choose_cell_border_color(self):
@@ -591,12 +714,28 @@ class MainWindow(QMainWindow):
         if color.isValid():
             color_hex = color.name()
             self.cell_border_color.setText(color_hex)
-            # 根据颜色亮度调整文字颜色
-            if color.lightness() > 128:
-                text_color = "black"
-            else:
-                text_color = "white"
-            self.cell_border_color.setStyleSheet(f"background-color: {color_hex}; color: {text_color};")
+            # 根据颜色亮度选择合适的文字颜色
+            text_color = "black" if self._is_light_color(color_hex) else "white"
+            self.cell_border_color.setStyleSheet(f"""
+                QPushButton#colorButton {{
+                    background: {color_hex} !important;
+                    color: {text_color} !important;
+                    border: 2px solid #bdc3c7 !important;
+                    border-radius: 4px !important;
+                    padding: 6px 12px !important;
+                    font-size: 12px !important;
+                    font-weight: normal !important;
+                    min-height: 16px !important;
+                    max-width: 80px !important;
+                }}
+                QPushButton#colorButton:hover {{
+                    border: 2px solid #3498db !important;
+                    background: {color_hex} !important;
+                }}
+                QPushButton#colorButton:pressed {{
+                    background: {self._darken_color(color_hex)} !important;
+                }}
+            """)
             self.on_config_changed()
 
     def on_color_scheme_changed(self):
@@ -864,7 +1003,27 @@ class MainWindow(QMainWindow):
         
         # 标签颜色
         self.label_color = QPushButton("#333333")
-        self.label_color.setStyleSheet("background-color: #333333; color: white;")
+        self.label_color.setObjectName("colorButton")
+        self.label_color.setStyleSheet("""
+            QPushButton#colorButton {
+                background: #333333 !important;
+                color: white !important;
+                border: 2px solid #bdc3c7 !important;
+                border-radius: 4px !important;
+                padding: 6px 12px !important;
+                font-size: 12px !important;
+                font-weight: normal !important;
+                min-height: 16px !important;
+                max-width: 80px !important;
+            }
+            QPushButton#colorButton:hover {
+                border: 2px solid #3498db !important;
+                background: #333333 !important;
+            }
+            QPushButton#colorButton:pressed {
+                background: #2c2c2c !important;
+            }
+        """)
         self.label_color.clicked.connect(self.choose_label_color)
         data_label_layout.addRow("标签颜色:", self.label_color)
         
@@ -903,7 +1062,27 @@ class MainWindow(QMainWindow):
         
         # 边框颜色
         self.cell_border_color = QPushButton("#ffffff")
-        self.cell_border_color.setStyleSheet("background-color: #ffffff; color: black;")
+        self.cell_border_color.setObjectName("colorButton")
+        self.cell_border_color.setStyleSheet("""
+            QPushButton#colorButton {
+                background: #ffffff !important;
+                color: black !important;
+                border: 2px solid #bdc3c7 !important;
+                border-radius: 4px !important;
+                padding: 6px 12px !important;
+                font-size: 12px !important;
+                font-weight: normal !important;
+                min-height: 16px !important;
+                max-width: 80px !important;
+            }
+            QPushButton#colorButton:hover {
+                border: 2px solid #3498db !important;
+                background: #ffffff !important;
+            }
+            QPushButton#colorButton:pressed {
+                background: #f0f0f0 !important;
+            }
+        """)
         self.cell_border_color.clicked.connect(self.choose_cell_border_color)
         cell_style_layout.addRow("边框颜色:", self.cell_border_color)
         
