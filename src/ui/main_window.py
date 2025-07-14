@@ -763,17 +763,40 @@ class MainWindow(QMainWindow):
         else:
             colors = self.color_schemes.get(scheme_name, [])
         
-        if colors:
-            # 创建渐变背景
-            gradient_stops = []
-            for i, color in enumerate(colors):
-                position = i / (len(colors) - 1) if len(colors) > 1 else 0
-                gradient_stops.append(f"{color} {position * 100:.1f}%")
-            
-            gradient = f"linear-gradient(to right, {', '.join(gradient_stops)})"
-            self.color_preview.setStyleSheet(f"background: {gradient}; border: 1px solid #ccc; border-radius: 4px;")
+        if colors and len(colors) > 0:
+            # 创建PyQt兼容的渐变背景
+            if len(colors) == 1:
+                # 单一颜色
+                self.color_preview.setStyleSheet(f"""
+                    QFrame {{
+                        background: {colors[0]};
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                    }}
+                """)
+            else:
+                # 多颜色渐变，使用qlineargradient
+                gradient_stops = []
+                for i, color in enumerate(colors):
+                    position = i / (len(colors) - 1) if len(colors) > 1 else 0
+                    gradient_stops.append(f"stop: {position:.3f} {color}")
+                
+                gradient = f"qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, {', '.join(gradient_stops)})"
+                self.color_preview.setStyleSheet(f"""
+                    QFrame {{
+                        background: {gradient};
+                        border: 1px solid #ccc;
+                        border-radius: 4px;
+                    }}
+                """)
         else:
-            self.color_preview.setStyleSheet("background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;")
+            self.color_preview.setStyleSheet("""
+                QFrame {
+                    background: #f0f0f0;
+                    border: 1px solid #ccc;
+                    border-radius: 4px;
+                }
+            """)
 
     def update_custom_color_editor(self):
         """更新自定义颜色编辑器"""
@@ -903,6 +926,8 @@ class MainWindow(QMainWindow):
         
         color_scheme_names = list(self.color_schemes.keys())
         self.color_scheme.addItems(color_scheme_names)
+        # 设置默认选择为蓝色渐变
+        self.color_scheme.setCurrentText("蓝色渐变")
         self.color_scheme.currentTextChanged.connect(self.on_color_scheme_changed)
         scheme_layout.addWidget(self.color_scheme)
         
