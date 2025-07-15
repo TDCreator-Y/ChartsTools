@@ -120,6 +120,22 @@ temp_*.py
 修复*.py
 安装*.py
 
+# 构建和打包相关文件
+*.spec
+build_*.bat
+install_*.bat
+test_*.bat
+dependency_checker.py
+version_info.txt
+pyinstaller_dependencies_list.txt
+
+# 开发报告和文档
+*完成报告.md
+*修复报告.md
+*指南.md
+部署*.md
+打包*.md
+
 # 配置文件的本地副本
 config_local.json
 settings_local.json

@@ -64,8 +64,8 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1200, 800)
         self.resize(1400, 900)
         
-        # 设置窗口图标（如果有的话）
-        # self.setWindowIcon(QIcon("resources/icons/app_icon.png"))
+        # 设置窗口图标
+        self.set_window_icon()
         
         # 初始化主题设置
         self.current_theme = "light"  # 默认浅色主题
@@ -4174,18 +4174,56 @@ console.log('   - 窗口大小变化时图表自动调整');'''
     
     def show_about(self):
         """显示关于信息"""
-        QMessageBox.about(self, '关于', 
-                         '<h3>ECharts矩阵热力图教学工具</h3>'
-                         '<p>版本: 1.0.0</p>'
-                         '<p>一个专门用于教学的矩阵热力图可视化工具</p>'
-                         '<p>基于Python + PyQt6 + ECharts开发</p>'
-                         '<p><b>主要功能:</b></p>'
-                         '<ul>'
-                         '<li>实时矩阵热力图预览</li>'
-                         '<li>可视化配置界面</li>'
-                         '<li>代码生成和导出</li>'
-                         '<li>多种数据格式支持</li>'
-                         '</ul>')
+        # 创建自定义关于对话框
+        about_box = QMessageBox(self)
+        about_box.setWindowTitle('关于 ChartsTools')
+        
+        # 设置图标
+        icon_paths = [
+            os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'icons', 'app_icon.png'),
+            os.path.join('resources', 'icons', 'app_icon.png'),
+            'resources/icons/app_icon.png'
+        ]
+        
+        for icon_path in icon_paths:
+            if os.path.exists(icon_path):
+                pixmap = QIcon(icon_path).pixmap(64, 64)
+                about_box.setIconPixmap(pixmap)
+                break
+        
+        # 设置文本内容
+        about_text = '''
+        <h2>ChartsTools 矩阵热力图可视化工具</h2>
+        <p><b>版本:</b> v1.2.0</p>
+        <p><b>描述:</b> 一个专门用于教学和数据分析的矩阵热力图可视化工具</p>
+        <p><b>技术栈:</b> Python + PyQt6 + ECharts</p>
+        
+        <h3>🔥 主要功能</h3>
+        <ul>
+        <li>📊 多种数据格式支持 (CSV、Excel)</li>
+        <li>🎨 15种专业配色方案 + 自定义颜色</li>
+        <li>⚙️ 60+ 实时配置项</li>
+        <li>💻 完整代码预览和导出</li>
+        <li>🖥️ 现代化界面 + 主题切换</li>
+        <li>🔧 完全离线运行</li>
+        </ul>
+        
+        <h3>📈 最新更新 (v1.2.0)</h3>
+        <ul>
+        <li>✅ 文件导入数据样式一致性修复</li>
+        <li>✅ 配置状态保持功能</li>
+        <li>✅ 颜色方案同步优化</li>
+        <li>✅ 软件图标添加</li>
+        </ul>
+        
+        <p style="color: #666; font-size: 10px; margin-top: 20px;">
+        © 2024 ChartsTools Project
+        </p>
+        '''
+        
+        about_box.setText(about_text)
+        about_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        about_box.exec()
     
     def on_config_tab_changed(self, index):
         """配置选项卡切换事件"""
@@ -4533,6 +4571,32 @@ console.log('   - 窗口大小变化时图表自动调整');'''
         except Exception as e:
             print(f"❌ 读取ECharts文件失败: {e}")
             return ""
+
+    def set_window_icon(self):
+        """设置窗口图标"""
+        try:
+            # 尝试从多个可能的路径加载图标
+            icon_paths = [
+                os.path.join(os.path.dirname(__file__), '..', '..', 'resources', 'icons', 'app_icon.png'),
+                os.path.join('resources', 'icons', 'app_icon.png'),
+                'resources/icons/app_icon.png'
+            ]
+            
+            icon_loaded = False
+            for icon_path in icon_paths:
+                if os.path.exists(icon_path):
+                    icon = QIcon(icon_path)
+                    if not icon.isNull():
+                        self.setWindowIcon(icon)
+                        icon_loaded = True
+                        print(f"✅ 窗口图标加载成功: {icon_path}")
+                        break
+            
+            if not icon_loaded:
+                print("⚠️ 未找到应用图标文件，使用默认图标")
+                
+        except Exception as e:
+            print(f"❌ 设置窗口图标失败: {e}")
 
 
 

@@ -101,13 +101,27 @@ def run_gui_mode():
     """运行GUI模式"""
     try:
         from PyQt6.QtWidgets import QApplication
+        from ui.splash_screen import show_splash_screen
         from ui.main_window import MainWindow
         
+        # 创建应用程序实例
         app = QApplication(sys.argv)
-        app.setApplicationName("ECharts矩阵热力图教学工具")
-        app.setApplicationVersion("1.0.0")
+        app.setApplicationName("ChartsTools")
+        app.setApplicationVersion("1.2.1")
+        app.setApplicationDisplayName("ECharts矩阵热力图教学工具")
         
+        # 显示启动画面
+        splash = show_splash_screen()
+        splash.start_loading()
+        
+        # 等待启动画面加载完成
+        while not splash.is_finished():
+            app.processEvents()
+        
+        # 创建主窗口
         window = MainWindow()
+        
+        # 启动画面自动关闭后显示主窗口
         window.show()
         
         print("🎉 GUI模式启动成功")
