@@ -96,7 +96,7 @@ class ModernSplashScreen(QSplashScreen):
         painter.drawRect(1, 1, width-2, height-2)
         
         # 绘制标题
-        title_font = QFont("Microsoft YaHei", 24, QFont.Weight.Bold)
+        title_font = QFont("Microsoft YaHei", 18, QFont.Weight.Bold)
         painter.setFont(title_font)
         painter.setPen(QColor(255, 255, 255))
         title_rect = QRect(20, 80, width-40, 60)
@@ -104,7 +104,7 @@ class ModernSplashScreen(QSplashScreen):
                         "ChartsTools")
         
         # 绘制副标题
-        subtitle_font = QFont("Microsoft YaHei", 12)
+        subtitle_font = QFont("Microsoft YaHei", 18)
         painter.setFont(subtitle_font)
         painter.setPen(QColor(200, 200, 200))
         subtitle_rect = QRect(20, 140, width-40, 30)
@@ -112,7 +112,7 @@ class ModernSplashScreen(QSplashScreen):
                         "矩阵热力图可视化工具")
         
         # 绘制版本信息
-        version_font = QFont("Microsoft YaHei", 10)
+        version_font = QFont("Microsoft YaHei", 18)
         painter.setFont(version_font)
         painter.setPen(QColor(150, 150, 150))
         version_rect = QRect(20, 170, width-40, 20)
@@ -170,7 +170,7 @@ class ModernSplashScreen(QSplashScreen):
         self.status_label.setStyleSheet("""
             QLabel {
                 color: white;
-                font-size: 12px;
+                font-size: 18px;
                 font-family: Microsoft YaHei;
                 margin: 5px;
             }

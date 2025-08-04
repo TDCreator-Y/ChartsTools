@@ -25,6 +25,7 @@ MANIFEST
 # PyInstaller
 *.manifest
 *.spec
+!main.spec
 
 # 单元测试
 .tox/
