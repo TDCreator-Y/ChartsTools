@@ -3,7 +3,7 @@
 一个基于 PyQt6 和 ECharts 的专业矩阵热力图可视化工具，专为教学和数据分析设计。
 
 （如果有需要升级优化可以联系我）
-
+![示例图片](https://github.com/TDCreator-Y/ChartsTools/blob/main/images/test.png?raw=true)
 ## 功能特点
 
 🔥 **矩阵热力图可视化** - 支持多种数据类型的热力图生成  
